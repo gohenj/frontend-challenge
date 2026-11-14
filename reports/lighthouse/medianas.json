@@ -1,0 +1,47 @@
+{
+  "environment": {
+    "os": "win32",
+    "release": "10.0.26200",
+    "arch": "x64",
+    "node": "v24.15.0",
+    "chromium": "159.0.8154.6"
+  },
+  "summary": {
+    "inicio-mobile": {
+      "performance": 95,
+      "accessibility": 100,
+      "best-practices": 96,
+      "seo": 91,
+      "lcp": 2905.8218,
+      "cls": 0,
+      "tbt": 69
+    },
+    "inicio-desktop": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 96,
+      "seo": 91,
+      "lcp": 206.4862,
+      "cls": 0,
+      "tbt": 0
+    },
+    "detalhe-mobile": {
+      "performance": 95,
+      "accessibility": 100,
+      "best-practices": 96,
+      "seo": 91,
+      "lcp": 2905.6364,
+      "cls": 0.0172296716219149,
+      "tbt": 34
+    },
+    "detalhe-desktop": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 96,
+      "seo": 91,
+      "lcp": 665.4782,
+      "cls": 0,
+      "tbt": 0
+    }
+  }
+}
