@@ -33,7 +33,7 @@ import type {
 } from "./contracts";
 import "./style.css";
 
-const api = axios.create({ baseURL: "/api", timeout: 4500 });
+const api = axios.create({ baseURL: import.meta.env.BASE_URL + "api", timeout: 4500 });
 const get = <T,>(path: string, signal?: AbortSignal) =>
   api.get<T>(path, { signal }).then((r) => r.data);
 const post = <T,>(path: string, body: unknown) =>
@@ -1112,6 +1112,7 @@ function Wallets() {
   );
 }
 const router = createRouter({
+  basepath: import.meta.env.BASE_URL,
   routeTree: root.addChildren([
     home,
     detail,
@@ -1133,7 +1134,7 @@ declare module "@tanstack/react-router" {
 async function start() {
   if (import.meta.env.VITE_ENABLE_MOCKS !== "false") {
     const { worker } = await import("./mocks");
-    await worker.start({ onUnhandledRequest: "bypass", quiet: true });
+    await worker.start({ serviceWorker: { url: import.meta.env.BASE_URL + "mockServiceWorker.js" }, onUnhandledRequest: "bypass", quiet: true });
   }
   ({ io } = await import("socket.io-client"));
   createRoot(document.getElementById("root")!).render(
@@ -1146,3 +1147,4 @@ void start().catch(() => {
   document.getElementById("root")!.textContent =
     "Não foi possível iniciar a demonstração. Recarregue a página.";
 });
+

@@ -160,9 +160,9 @@ const settle = (purchase: Purchase) => {
   save();
   emit("order.updated", order.id, order.version, purchase.owner);
 };
-const api = http.all("/api/*", async ({ request }) => {
+const api = http.all(import.meta.env.BASE_URL + "api/*", async ({ request }) => {
   const url = new URL(request.url);
-  const path = url.pathname.slice(5);
+  const path = url.pathname.slice(import.meta.env.BASE_URL.length + 4);
   const method = request.method;
   const body =
     method === "GET" || method === "DELETE"
@@ -429,3 +429,4 @@ export const worker = setupWorker(
     connection.client.addEventListener("close", () => peers.delete(peer));
   }),
 );
+
