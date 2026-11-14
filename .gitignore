@@ -4,3 +4,4 @@ playwright-report/
 test-results/
 .env.local
 build.log
+test-results-final/

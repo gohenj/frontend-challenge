@@ -140,7 +140,10 @@ function Shell() {
   const logout = useMutation({
     mutationFn: () => api.delete("/session"),
     onSuccess: async () => {
-      client.clear();
+      await client.cancelQueries();
+      client.removeQueries({
+        predicate: (query) => query.queryKey[0] !== "session",
+      });
       client.setQueryData(["session"], null);
       await navigate({ to: "/", search: defaultSearch });
     },
@@ -149,7 +152,10 @@ function Shell() {
     mutationFn: (scenario: string) => post("/demo", { scenario }),
     onSuccess: async (_, scenario) => {
       if (scenario === "reset") {
-        client.clear();
+        await client.cancelQueries();
+        client.removeQueries({
+          predicate: (query) => query.queryKey[0] !== "session",
+        });
         setNotice("");
         await navigate({ to: "/", search: defaultSearch });
       }
@@ -639,7 +645,10 @@ function Auth({ register: create }: { register?: boolean }) {
     mutationFn: (body: Record<string, FormDataEntryValue>) =>
       post<User>(create ? "/register" : "/login", body),
     onSuccess: async (user) => {
-      client.clear();
+      await client.cancelQueries();
+      client.removeQueries({
+        predicate: (query) => query.queryKey[0] !== "session",
+      });
       client.setQueryData(["session"], user);
       await router.navigate({ href: next });
     },
