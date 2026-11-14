@@ -33,7 +33,10 @@ import type {
 } from "./contracts";
 import "./style.css";
 
-const api = axios.create({ baseURL: import.meta.env.BASE_URL + "api", timeout: 4500 });
+const api = axios.create({
+  baseURL: import.meta.env.BASE_URL + "api",
+  timeout: 4500,
+});
 const get = <T,>(path: string, signal?: AbortSignal) =>
   api.get<T>(path, { signal }).then((r) => r.data);
 const post = <T,>(path: string, body: unknown) =>
@@ -100,16 +103,19 @@ function Summary({ quote }: { quote: Quote }) {
     </dl>
   );
 }
+function artUrl(index: number) {
+  return import.meta.env.BASE_URL + "art/ape-" + (index % 4) + ".png";
+}
 function Art({ nft }: { nft: Nft }) {
   return (
-    <div
+    <img
       className="art"
-      role="img"
-      aria-label={nft.name}
-      style={{ "--hue": 115 + nft.art * 29 } as React.CSSProperties}
-    >
-      <span aria-hidden="true">{["◈", "✺", "✦", "◉"][nft.art % 4]}</span>
-    </div>
+      src={artUrl(nft.art)}
+      alt=""
+      width={1254}
+      height={1254}
+      decoding="async"
+    />
   );
 }
 function Shell() {
@@ -177,7 +183,7 @@ function Shell() {
     <>
       <header>
         <Link to="/" search={defaultSearch} className="brand">
-          JUNGLE<span> / </span>MARKET
+          KURIO
         </Link>
         <nav aria-label="Principal">
           <Link to="/" search={defaultSearch}>
@@ -278,15 +284,30 @@ function Home() {
   return (
     <>
       <section className="hero">
-        <p>JUNGLE GAMING</p>
-        <h1>A floresta é sua.</h1>
-        <p>Explore criaturas, relíquias e arte digital colecionável.</p>
-        <a className="button" href="#catalogo">
-          Explorar coleção
-        </a>
+        <div>
+          <p>Bem-vindo à Kurio</p>
+          <h1>
+            Seja dono do futuro
+            <br />
+            da arte digital
+          </h1>
+          <p>
+            Descubra NFTs selecionados de criadores e colecione arte digital
+            verificada.
+          </p>
+          <a className="button" href="#catalogo">
+            Explorar
+          </a>
+        </div>
+        <img
+          src={artUrl(0)}
+          alt="Emerald Ape com óculos verdes e jaqueta esmeralda"
+          width={1254}
+          height={1254}
+          fetchPriority="high"
+        />
       </section>
       <section id="catalogo">
-        <h2>Explorar NFTs</h2>
         <form
           className="filters"
           onSubmit={(e) => {
@@ -336,52 +357,55 @@ function Home() {
             Disponíveis
           </label>
         </form>
-        {catalog.isPending ? (
-          <Loading />
-        ) : catalog.isError ? (
-          <Failure error={catalog.error} retry={catalog.refetch} />
-        ) : (
-          <>
-            {!catalog.data.items.length && <p>Nenhum NFT encontrado.</p>}
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {catalog.data.items.map((nft) => (
-                <Link
-                  className="card"
-                  key={nft.id}
-                  to="/nft/$id"
-                  params={{ id: nft.id }}
-                >
-                  <Art nft={nft} />
-                  <div>
-                    <small>{nft.category}</small>
-                    <h3>{nft.name}</h3>
-                    <strong>{nft.price} ETH</strong> ·{" "}
-                    {nft.stock ? "Disponível" : "Esgotado"}
-                  </div>
-                </Link>
-              ))}
-            </div>
-            {catalog.data.pages > 1 && (
-              <div className="pagination">
-                <button
-                  disabled={search.page <= 1}
-                  onClick={() => void update({ page: search.page - 1 })}
-                >
-                  Anterior
-                </button>
-                <span>
-                  Página {search.page} de {catalog.data.pages}
-                </span>
-                <button
-                  disabled={search.page >= catalog.data.pages}
-                  onClick={() => void update({ page: search.page + 1 })}
-                >
-                  Próxima
-                </button>
+        <div className="catalog-results">
+          <h2>Todos os NFTs</h2>
+          {catalog.isPending ? (
+            <Loading />
+          ) : catalog.isError ? (
+            <Failure error={catalog.error} retry={catalog.refetch} />
+          ) : (
+            <>
+              {!catalog.data.items.length && <p>Nenhum NFT encontrado.</p>}
+              <div className="catalog-grid">
+                {catalog.data.items.map((nft) => (
+                  <Link
+                    className="card"
+                    key={nft.id}
+                    to="/nft/$id"
+                    params={{ id: nft.id }}
+                  >
+                    <Art nft={nft} />
+                    <div>
+                      <small>{nft.category}</small>
+                      <h3>{nft.name}</h3>
+                      <strong>{nft.price} ETH</strong> ·{" "}
+                      {nft.stock ? "Disponível" : "Esgotado"}
+                    </div>
+                  </Link>
+                ))}
               </div>
-            )}
-          </>
-        )}
+              {catalog.data.pages > 1 && (
+                <div className="pagination">
+                  <button
+                    disabled={search.page <= 1}
+                    onClick={() => void update({ page: search.page - 1 })}
+                  >
+                    Anterior
+                  </button>
+                  <span>
+                    Página {search.page} de {catalog.data.pages}
+                  </span>
+                  <button
+                    disabled={search.page >= catalog.data.pages}
+                    onClick={() => void update({ page: search.page + 1 })}
+                  >
+                    Próxima
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </section>
     </>
   );
@@ -1134,7 +1158,11 @@ declare module "@tanstack/react-router" {
 async function start() {
   if (import.meta.env.VITE_ENABLE_MOCKS !== "false") {
     const { worker } = await import("./mocks");
-    await worker.start({ serviceWorker: { url: import.meta.env.BASE_URL + "mockServiceWorker.js" }, onUnhandledRequest: "bypass", quiet: true });
+    await worker.start({
+      serviceWorker: { url: import.meta.env.BASE_URL + "mockServiceWorker.js" },
+      onUnhandledRequest: "bypass",
+      quiet: true,
+    });
   }
   ({ io } = await import("socket.io-client"));
   createRoot(document.getElementById("root")!).render(
@@ -1147,4 +1175,3 @@ void start().catch(() => {
   document.getElementById("root")!.textContent =
     "Não foi possível iniciar a demonstração. Recarregue a página.";
 });
-
