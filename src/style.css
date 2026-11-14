@@ -404,3 +404,88 @@ img.art {
     gap: 0.75rem;
   }
 }
+
+.nft-detail {
+  grid-template-columns: minmax(0, 46%) minmax(0, 1fr);
+}
+.nft-detail h1,
+.account-content h1 {
+  font-size: clamp(1.2rem, 2.5vw, 2rem);
+  margin-top: 0.75rem;
+}
+.nft-detail p,
+.nft-meta {
+  color: #d6b994;
+}
+.nft-meta {
+  display: grid;
+  gap: 0.45rem;
+}
+.nft-meta > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+.nft-meta dt {
+  color: #f5eee8;
+}
+.nft-detail input[type="number"] {
+  max-width: 7rem;
+}
+.nft-detail form {
+  justify-items: start;
+}
+.account-layout {
+  display: grid;
+  grid-template-columns: minmax(10rem, 24%) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+.account-menu {
+  background: #241711;
+  padding: 1rem;
+}
+.account-menu h2 {
+  font-size: 1rem;
+}
+.account-menu nav {
+  display: grid;
+  gap: 0.4rem;
+}
+.account-menu a {
+  padding: 0.4rem 0.65rem;
+}
+.account-menu a[aria-current="page"] {
+  border-left: 2px solid #dc9657;
+  color: #f5b67e;
+}
+.account-content form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 48rem;
+}
+.account-content form > button {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+@media (max-width: 700px) {
+  .nft-detail,
+  .account-layout,
+  .account-content form {
+    grid-template-columns: 1fr;
+  }
+  .nft-detail {
+    gap: 0;
+  }
+  .nft-detail > div:last-child {
+    background: #241711;
+    padding: 1.2rem;
+    border-radius: 0 0 1.25rem 1.25rem;
+  }
+  .nft-detail form .primary {
+    width: 100%;
+    border-radius: 999px;
+  }
+  .account-menu nav {
+    display: flex;
+  }
+}

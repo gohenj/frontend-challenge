@@ -459,12 +459,28 @@ function Detail() {
   const remaining =
     nft.data.stock - (cart.data?.lines.find((i) => i.id === id)?.quantity ?? 0);
   return (
-    <article className="split">
-      <Art nft={nft.data} />
+    <article className="split nft-detail">
+      <div className="nft-art">
+        <Art nft={nft.data} />
+      </div>
       <div>
-        <small>{nft.data.category}</small>
+        <small>Início / Coleção</small>
         <h1>{nft.data.name}</h1>
-        <p>Edição Genesis · {nft.data.stock} disponíveis</p>
+        <p>Um colecionável digital da coleção Kurio, verificado na Ethereum.</p>
+        <dl className="nft-meta">
+          <div>
+            <dt>Edição</dt>
+            <dd>Genesis</dd>
+          </div>
+          <div>
+            <dt>ID do token</dt>
+            <dd>#{id.padStart(4, "0")}</dd>
+          </div>
+          <div>
+            <dt>Disponibilidade</dt>
+            <dd>{nft.data.stock} disponíveis</dd>
+          </div>
+        </dl>
         <p className="price">{nft.data.price} ETH</p>
         {user ? (
           <button
@@ -1017,6 +1033,17 @@ const wallets = createRoute({
   beforeLoad: privateRoute,
   component: Wallets,
 });
+function AccountMenu() {
+  return (
+    <aside className="account-menu">
+      <h2>Meu perfil</h2>
+      <nav aria-label="Minha conta">
+        <Link to="/profile">Dados do perfil</Link>
+        <Link to="/wallets">Carteiras</Link>
+      </nav>
+    </aside>
+  );
+}
 function Profile() {
   const { data: user } = useSession();
   const action = useMutation({
@@ -1031,58 +1058,61 @@ function Profile() {
       </Link>
     );
   return (
-    <section className="panel narrow">
-      <h1>Perfil</h1>
-      <form
-        key={user.id}
-        onSubmit={(e) => {
-          e.preventDefault();
-          action.mutate(Object.fromEntries(new FormData(e.currentTarget)));
-        }}
-      >
-        <label>
-          Nome
-          <input name="name" defaultValue={user.name} required />
-        </label>
-        <label>
-          E-mail
-          <input value={user.email} readOnly />
-        </label>
-        <label>
-          URL do avatar
-          <input type="url" name="avatar" defaultValue={user.avatar} />
-        </label>
-        {user.avatar && (
-          <img
-            className="avatar"
-            src={user.avatar}
-            alt="Avatar do colecionador"
-          />
-        )}
-        <label>
-          Senha atual
-          <input
-            type="password"
-            name="previous"
-            autoComplete="current-password"
-          />
-        </label>
-        <label>
-          Nova senha
-          <input
-            type="password"
-            name="password"
-            minLength={8}
-            autoComplete="new-password"
-          />
-        </label>
-        {feedback(action.error)}
-        {action.isSuccess && <p role="status">Perfil salvo.</p>}
-        <Button disabled={action.isPending}>Salvar perfil</Button>
-      </form>
-      <p>
-        <Link to="/wallets">Carteiras</Link>
-      </p>
+    <section className="account-layout">
+      <AccountMenu />
+      <div className="account-content">
+        <h1>Perfil</h1>
+        <form
+          key={user.id}
+          onSubmit={(e) => {
+            e.preventDefault();
+            action.mutate(Object.fromEntries(new FormData(e.currentTarget)));
+          }}
+        >
+          <label>
+            Nome
+            <input name="name" defaultValue={user.name} required />
+          </label>
+          <label>
+            E-mail
+            <input value={user.email} readOnly />
+          </label>
+          <label>
+            URL do avatar
+            <input type="url" name="avatar" defaultValue={user.avatar} />
+          </label>
+          {user.avatar && (
+            <img
+              className="avatar"
+              src={user.avatar}
+              alt="Avatar do colecionador"
+            />
+          )}
+          <label>
+            Senha atual
+            <input
+              type="password"
+              name="previous"
+              autoComplete="current-password"
+            />
+          </label>
+          <label>
+            Nova senha
+            <input
+              type="password"
+              name="password"
+              minLength={8}
+              autoComplete="new-password"
+            />
+          </label>
+          {feedback(action.error)}
+          {action.isSuccess && <p role="status">Perfil salvo.</p>}
+          <Button disabled={action.isPending}>Salvar perfil</Button>
+        </form>
+        <p>
+          <Link to="/wallets">Carteiras</Link>
+        </p>
+      </div>
     </section>
   );
 }
@@ -1108,30 +1138,37 @@ function Wallets() {
   if (resource.isError)
     return <Failure error={resource.error} retry={resource.refetch} />;
   return (
-    <section className="panel narrow">
-      <h1>Carteiras</h1>
-      <form
-        key={user.id}
-        onSubmit={(e) => {
-          e.preventDefault();
-          action.mutate(Object.fromEntries(new FormData(e.currentTarget)));
-        }}
-      >
-        <label>
-          Carteira principal
-          <input name="address" defaultValue={resource.data.address} required />
-        </label>
-        <label>
-          Carteira secundária
-          <input name="secondary" defaultValue={resource.data.secondary} />
-        </label>
-        {feedback(action.error)}
-        {action.isSuccess && <p role="status">Carteiras salvas.</p>}
-        <Button disabled={action.isPending}>Salvar carteiras</Button>
-      </form>
-      <p>
-        <Link to="/checkout">Voltar ao pagamento</Link>
-      </p>
+    <section className="account-layout">
+      <AccountMenu />
+      <div className="account-content">
+        <h1>Carteiras</h1>
+        <form
+          key={user.id}
+          onSubmit={(e) => {
+            e.preventDefault();
+            action.mutate(Object.fromEntries(new FormData(e.currentTarget)));
+          }}
+        >
+          <label>
+            Carteira principal
+            <input
+              name="address"
+              defaultValue={resource.data.address}
+              required
+            />
+          </label>
+          <label>
+            Carteira secundária
+            <input name="secondary" defaultValue={resource.data.secondary} />
+          </label>
+          {feedback(action.error)}
+          {action.isSuccess && <p role="status">Carteiras salvas.</p>}
+          <Button disabled={action.isPending}>Salvar carteiras</Button>
+        </form>
+        <p>
+          <Link to="/checkout">Voltar ao pagamento</Link>
+        </p>
+      </div>
     </section>
   );
 }
