@@ -1034,7 +1034,14 @@ function Checkout() {
     submit.mutate(attempt);
   };
   return (
-    <>
+    <div className="checkout-page">
+      <nav className="checkout-breadcrumb" aria-label="Localização">
+        <Link to="/" search={defaultSearch}>
+          Início
+        </Link>
+        <Link to="/cart">Carrinho</Link>
+        <span>Pagamento</span>
+      </nav>
       <h1>Pagamento</h1>
       {quote.isError && <Failure error={quote.error} retry={quote.refetch} />}
       {quote.isPending && <Loading />}
@@ -1050,6 +1057,8 @@ function Checkout() {
       {quote.data && (
         <div className="split checkout-layout">
           <form
+            id="checkout-form"
+            aria-label="Perfil do colecionador"
             onSubmit={(e) => {
               e.preventDefault();
               setReview({
@@ -1089,45 +1098,10 @@ function Checkout() {
                 <option>Polygon</option>
               </select>
             </label>
-            <div>
-              <button
-                type="button"
-                onClick={(e) => {
-                  const address = new FormData(e.currentTarget.form!).get(
-                    "wallet",
-                  );
-                  setConnection(
-                    address ? "Conectada" : "Selecione uma carteira",
-                  );
-                }}
-              >
-                Conectar carteira
-              </button>{" "}
-              <button
-                type="button"
-                onClick={() => setConnection("Conexão recusada")}
-              >
-                Simular recusa
-              </button>{" "}
-              <button
-                type="button"
-                onClick={() => setConnection("Desconectada")}
-              >
-                Desconectar
-              </button>
-            </div>
-            <p role="status">{connection}</p>
-            <Link to="/wallets">Gerenciar carteiras</Link>
-            <Button
-              disabled={
-                !!retry ||
-                !quote.data.items.length ||
-                quote.data.items.some((i) => i.quantity > i.nft.stock) ||
-                connection !== "Conectada"
-              }
-            >
-              Revisar pedido
-            </Button>
+            <label className="checkout-note">
+              Observação do colecionador (opcional)
+              <textarea name="note" rows={5} maxLength={500} />
+            </label>{" "}
           </form>
           <section className="panel purchase-summary">
             <h2>Seus NFTs</h2>
@@ -1136,7 +1110,8 @@ function Checkout() {
                 <li className="purchase-item" key={nft.id}>
                   <Art nft={nft} />
                   <span>
-                    {nft.name}
+                    <strong>{nft.name}</strong>
+                    <small>ID do token: #{nft.id.padStart(4, "0")}</small>
                     <small>
                       {quantity} × {nft.price} ETH
                     </small>
@@ -1145,9 +1120,75 @@ function Checkout() {
               ))}
             </ul>
             <Summary quote={quote.data} />
+            <fieldset className="checkout-wallet">
+              <legend>Carteira e rede</legend>
+              {["WalletConnect", "MetaMask", "Coinbase Wallet"].map(
+                (provider, index) => (
+                  <label key={provider}>
+                    <input
+                      form="checkout-form"
+                      type="radio"
+                      name="provider"
+                      value={provider}
+                      defaultChecked={index === 0}
+                      onChange={() => setConnection("")}
+                    />
+                    {provider}
+                  </label>
+                ),
+              )}
+            </fieldset>
+            <div className="checkout-actions">
+              {" "}
+              <div>
+                <button
+                  type="button"
+                  form="checkout-form"
+                  onClick={(e) => {
+                    const address = new FormData(e.currentTarget.form!).get(
+                      "wallet",
+                    );
+                    setConnection(
+                      address ? "Conectada" : "Selecione uma carteira",
+                    );
+                  }}
+                >
+                  Conectar carteira
+                </button>{" "}
+                <button
+                  type="button"
+                  form="checkout-form"
+                  onClick={() => setConnection("Conexão recusada")}
+                >
+                  Simular recusa
+                </button>{" "}
+                <button
+                  type="button"
+                  form="checkout-form"
+                  onClick={() => setConnection("Desconectada")}
+                >
+                  Desconectar
+                </button>
+              </div>
+              <p role="status">{connection}</p>
+              <Link to="/wallets">Gerenciar carteiras</Link>
+              <Button
+                type="submit"
+                form="checkout-form"
+                disabled={
+                  !!retry ||
+                  !quote.data.items.length ||
+                  quote.data.items.some((i) => i.quantity > i.nft.stock) ||
+                  connection !== "Conectada"
+                }
+              >
+                Revisar pedido
+              </Button>
+            </div>
           </section>
         </div>
       )}
+      <KurioInfo />
       <Modal
         open={!!review}
         onClose={() => setReview(null)}
@@ -1175,7 +1216,7 @@ function Checkout() {
           Confirmar compra
         </Button>
       </Modal>
-    </>
+    </div>
   );
 }
 function Modal({

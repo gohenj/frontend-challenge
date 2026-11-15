@@ -879,3 +879,115 @@ main:has(.home-journal) {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.checkout-page {
+  max-width: 1125px;
+  margin-inline: auto;
+}
+.checkout-page h1 {
+  font-size: clamp(1.25rem, 3vw, 1.8rem);
+}
+.checkout-breadcrumb {
+  color: #d6b994;
+  font-size: 0.8rem;
+  margin-bottom: 1.25rem;
+}
+.checkout-breadcrumb > * + *::before {
+  content: "/";
+  margin-right: 0.85rem;
+  color: #a67449;
+}
+.checkout-page .checkout-layout {
+  grid-template-columns: minmax(0, 1.88fr) minmax(0, 1fr);
+  gap: 1.85rem;
+}
+.checkout-layout > form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  font-size: 0.9rem;
+}
+.checkout-layout > form h2,
+.checkout-note {
+  grid-column: 1 / -1;
+}
+.checkout-layout > form h2 {
+  font-size: 1rem;
+  margin-bottom: 0;
+}
+.checkout-layout :is(input:not([type="radio"]), select, textarea) {
+  border: 1px solid #634431;
+  background: transparent;
+  border-radius: 0.2rem;
+}
+.checkout-note textarea {
+  width: 100%;
+  padding: 0.6rem;
+  resize: vertical;
+}
+.checkout-page .purchase-summary {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.checkout-page .purchase-summary h2 {
+  border-bottom: 1px solid #634431;
+  padding-bottom: 0.6rem;
+}
+.checkout-page .checkout-items li {
+  background: #241711;
+  border-radius: 0.2rem;
+}
+.checkout-page .summary > div:last-child dd {
+  color: #dc9657;
+}
+.checkout-wallet {
+  min-width: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+.checkout-wallet legend {
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 0.7rem;
+}
+.checkout-wallet label {
+  display: flex;
+  align-items: center;
+  border: 1px solid #634431;
+  border-radius: 0.2rem;
+  padding: 0.65rem;
+  cursor: pointer;
+}
+.checkout-wallet label:has(:checked) {
+  border-color: #dc9657;
+}
+.checkout-wallet input {
+  width: auto;
+  accent-color: #dc9657;
+}
+.checkout-actions {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+  font-size: 0.85rem;
+}
+.checkout-actions > .primary {
+  width: 100%;
+}
+.checkout-actions > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.checkout-actions > p:empty {
+  margin: 0;
+}
+@media (max-width: 700px) {
+  .checkout-page .checkout-layout,
+  .checkout-layout > form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .checkout-actions > .primary {
+    border-radius: 999px;
+  }
+}
