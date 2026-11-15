@@ -576,77 +576,140 @@ function Detail() {
       }),
     onSuccess: () => refresh("cart", "quote"),
   });
+  const [view, setView] = useState({ id, index: 0 });
+  const related = useQuery({
+    queryKey: ["nfts", "related"],
+    queryFn: ({ signal }) => get<Catalog>("/nfts", signal),
+  });
+  const selected = view.id === id ? view.index : 0;
   if (nft.isPending) return <Loading />;
   if (nft.isError) return <Failure error={nft.error} retry={nft.refetch} />;
   const remaining =
     nft.data.stock - (cart.data?.lines.find((i) => i.id === id)?.quantity ?? 0);
   return (
-    <article className="split nft-detail">
-      <div className="nft-art">
-        <Art nft={nft.data} />
-      </div>
-      <div>
-        <small>Início / Coleção</small>
-        <h1>{nft.data.name}</h1>
-        <p>Um colecionável digital da coleção Kurio, verificado na Ethereum.</p>
-        <dl className="nft-meta">
-          <div>
-            <dt>Edição</dt>
-            <dd>Genesis</dd>
+    <div className="detail-page">
+      <article className="split nft-detail">
+        <div className="detail-gallery">
+          <div className="detail-thumbs" aria-label="Enquadramentos da arte">
+            {["Completa", "Rosto", "Traje"].map((label, index) => (
+              <button
+                type="button"
+                key={label}
+                aria-label={label}
+                aria-pressed={selected === index}
+                onClick={() => setView({ id, index })}
+                data-view={index}
+              >
+                <Art nft={nft.data} />
+              </button>
+            ))}
           </div>
-          <div>
-            <dt>ID do token</dt>
-            <dd>#{id.padStart(4, "0")}</dd>
+          <div className="nft-art">
+            <div className="detail-crop" data-view={selected}>
+              <Art nft={nft.data} />
+            </div>
           </div>
-          <div>
-            <dt>Disponibilidade</dt>
-            <dd>{nft.data.stock} disponíveis</dd>
-          </div>
-        </dl>
-        <p className="price">{nft.data.price} ETH</p>
-        {user ? (
-          <button
-            aria-pressed={favorites.data?.includes(id) ?? false}
-            disabled={favorite.isPending}
-            onClick={() => favorite.mutate()}
-          >
-            Favorito
-          </button>
-        ) : (
-          <Link to="/login" search={{ next: location.pathname }}>
-            Entre para favoritar
-          </Link>
-        )}
-        {feedback(favorite.error)}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            add.mutate(Number(new FormData(e.currentTarget).get("quantity")));
-          }}
-        >
-          <label>
-            Quantidade
-            <input
-              type="number"
-              min="1"
-              max={Math.max(1, remaining)}
-              name="quantity"
-              defaultValue="1"
-              disabled={remaining <= 0}
-            />
-          </label>
-          <Button disabled={add.isPending || !cart.data || remaining <= 0}>
-            Adicionar ao carrinho
-          </Button>
-        </form>
-        {feedback(add.error)}
-        {add.isSuccess && (
-          <p role="status">
-            Adicionado. <Link to="/cart">Ver carrinho</Link>
+        </div>
+        <div>
+          <small>Início / Coleção</small>
+          <h1>{nft.data.name}</h1>
+          <p>
+            Um colecionável digital da coleção Kurio, verificado na Ethereum.
           </p>
+          <dl className="nft-meta">
+            <div>
+              <dt>Edição</dt>
+              <dd>Genesis</dd>
+            </div>
+            <div>
+              <dt>ID do token</dt>
+              <dd>#{id.padStart(4, "0")}</dd>
+            </div>
+            <div>
+              <dt>Disponibilidade</dt>
+              <dd>{nft.data.stock} disponíveis</dd>
+            </div>
+          </dl>
+          <p className="price">{nft.data.price} ETH</p>
+          {user ? (
+            <button
+              aria-pressed={favorites.data?.includes(id) ?? false}
+              disabled={favorite.isPending}
+              onClick={() => favorite.mutate()}
+            >
+              Favorito
+            </button>
+          ) : (
+            <Link to="/login" search={{ next: location.pathname }}>
+              Entre para favoritar
+            </Link>
+          )}
+          {feedback(favorite.error)}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              add.mutate(Number(new FormData(e.currentTarget).get("quantity")));
+            }}
+          >
+            <label>
+              Quantidade
+              <input
+                type="number"
+                min="1"
+                max={Math.max(1, remaining)}
+                name="quantity"
+                defaultValue="1"
+                disabled={remaining <= 0}
+              />
+            </label>
+            <Button disabled={add.isPending || !cart.data || remaining <= 0}>
+              Adicionar ao carrinho
+            </Button>
+          </form>
+          {feedback(add.error)}
+          {add.isSuccess && (
+            <p role="status">
+              Adicionado. <Link to="/cart">Ver carrinho</Link>
+            </p>
+          )}
+        </div>
+      </article>
+      <section className="detail-section">
+        <h2>Detalhes do NFT</h2>
+        <p>
+          {nft.data.name} é um colecionável digital da Kurio Editions. A obra
+          explora identidade, movimento e luz em um mundo digital sem
+          fronteiras.
+        </p>
+        <dl>
+          <dt>Rede</dt>
+          <dd>Ethereum</dd>
+          <dt>Coleção</dt>
+          <dd>Kurio Editions</dd>
+          <dt>Edição</dt>
+          <dd>Genesis</dd>
+        </dl>
+      </section>
+      <section className="detail-section">
+        <h2>Mais desta coleção</h2>
+        {related.isPending && <Loading />}
+        {related.isError && (
+          <Failure error={related.error} retry={related.refetch} />
         )}
-      </div>
-    </article>
+        <div className="detail-related">
+          {related.data?.items
+            .filter((item) => item.id !== id)
+            .slice(0, 5)
+            .map((item) => (
+              <Link key={item.id} to="/nft/$id" params={{ id: item.id }}>
+                <Art nft={item} />
+                <span>{item.name}</span>
+                <strong>{item.price} ETH</strong>
+              </Link>
+            ))}
+        </div>
+      </section>
+    </div>
   );
 }
 const cartRoute = createRoute({
