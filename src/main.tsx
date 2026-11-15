@@ -1438,6 +1438,64 @@ const wallets = createRoute({
   beforeLoad: privateRoute,
   component: Wallets,
 });
+const wishlist = createRoute({
+  getParentRoute: () => root,
+  path: "/wishlist",
+  beforeLoad: privateRoute,
+  component: Wishlist,
+});
+function Wishlist() {
+  const { data: user } = useSession();
+  const saved = useQuery({
+    queryKey: ["favorites", user?.id, "items"],
+    queryFn: async ({ signal }) => {
+      const ids = await get<string[]>("/favorites", signal);
+      return Promise.all(ids.map((id) => get<Nft>("/nfts/" + id, signal)));
+    },
+    enabled: !!user,
+  });
+  return (
+    <section className="account-layout">
+      <AccountMenu />
+      <div className="account-content">
+        <h1>Lista de interesse</h1>
+        {!user ? (
+          <Link to="/login" search={{ next: "/wishlist" }}>
+            Entrar
+          </Link>
+        ) : saved.isPending ? (
+          <Loading />
+        ) : saved.isError ? (
+          <Failure error={saved.error} retry={saved.refetch} />
+        ) : saved.data.length ? (
+          <div className="catalog-grid">
+            {saved.data.map((nft) => (
+              <Link
+                className="card"
+                key={nft.id}
+                to="/nft/$id"
+                params={{ id: nft.id }}
+              >
+                <Art nft={nft} />
+                <div>
+                  <h3>{nft.name}</h3>
+                  <strong>{nft.price} ETH</strong>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p>
+            Você ainda não favoritou nenhum NFT.{" "}
+            <Link to="/" search={defaultSearch}>
+              Explorar catálogo
+            </Link>
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
 function AccountMenu() {
   return (
     <aside className="account-menu">
@@ -1445,12 +1503,14 @@ function AccountMenu() {
       <nav aria-label="Minha conta">
         <Link to="/profile">Dados do perfil</Link>
         <Link to="/wallets">Carteiras</Link>
+        <Link to="/wishlist">Lista de interesse</Link>
       </nav>
     </aside>
   );
 }
 function Profile() {
   const { data: user } = useSession();
+  const [passwordError, setPasswordError] = useState(false);
   const action = useMutation({
     mutationFn: (data: Record<string, FormDataEntryValue>) =>
       post<User>("/profile", data),
@@ -1471,7 +1531,14 @@ function Profile() {
           key={user.id}
           onSubmit={(e) => {
             e.preventDefault();
-            action.mutate(Object.fromEntries(new FormData(e.currentTarget)));
+            const form = new FormData(e.currentTarget);
+            if (form.get("password") !== form.get("confirmation")) {
+              setPasswordError(true);
+              return;
+            }
+            setPasswordError(false);
+            form.delete("confirmation");
+            action.mutate(Object.fromEntries(form));
           }}
         >
           <label>
@@ -1493,6 +1560,7 @@ function Profile() {
               alt="Avatar do colecionador"
             />
           )}
+          <h2 className="account-password-heading">Alterar senha</h2>
           <label>
             Senha atual
             <input
@@ -1510,6 +1578,21 @@ function Profile() {
               autoComplete="new-password"
             />
           </label>
+          <label>
+            Confirmar nova senha
+            <input
+              name="confirmation"
+              type="password"
+              autoComplete="new-password"
+              minLength={8}
+              onChange={() => setPasswordError(false)}
+            />
+          </label>
+          {passwordError && (
+            <p role="alert" className="error">
+              As novas senhas precisam ser iguais.
+            </p>
+          )}
           {feedback(action.error)}
           {action.isSuccess && <p role="status">Perfil salvo.</p>}
           <Button disabled={action.isPending}>Salvar perfil</Button>
@@ -1580,6 +1663,7 @@ function Wallets() {
 const router = createRouter({
   basepath: import.meta.env.BASE_URL,
   routeTree: root.addChildren([
+    wishlist,
     home,
     detail,
     cartRoute,

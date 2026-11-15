@@ -1178,3 +1178,19 @@ main:has(.home-journal) {
     width: 100%;
   }
 }
+
+.account-layout {
+  max-width: 1125px;
+  margin-inline: auto;
+}
+.account-menu a {
+  color: #dc9657;
+}
+.account-content form .account-password-heading {
+  grid-column: 1 / -1;
+  font-size: 1rem;
+  margin: 0.65rem 0 0;
+}
+.account-content .catalog-grid {
+  margin-block: 1rem;
+}
