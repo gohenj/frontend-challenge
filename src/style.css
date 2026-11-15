@@ -991,3 +991,76 @@ main:has(.home-journal) {
     border-radius: 999px;
   }
 }
+
+.receipt {
+  max-width: 542px;
+  padding: clamp(1rem, 4vw, 2.6rem);
+  border: 0;
+  border-bottom: 0.6rem solid #dc9657;
+  border-radius: 0;
+}
+.receipt-heading,
+.receipt-note,
+.receipt-reference {
+  text-align: center;
+}
+.receipt-heading h1 {
+  font-size: 1.25rem;
+}
+.receipt-mark {
+  display: grid;
+  place-items: center;
+  margin: 0 auto 1rem;
+  width: 2.8rem;
+  height: 2.8rem;
+  border: 1px solid #dc9657;
+  border-radius: 50%;
+  color: #dc9657;
+  font-size: 1.5rem;
+}
+.receipt-order {
+  font-size: 0.8rem;
+  color: #d6b994;
+  overflow-wrap: anywhere;
+  border-block: 1px solid #634431;
+  padding-block: 0.75rem;
+}
+.receipt h2 {
+  font-size: 0.95rem;
+  margin-top: 1rem;
+}
+.receipt-items {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.receipt-items li {
+  display: grid;
+  grid-template-columns: 3.2rem minmax(0, 1fr) auto;
+  gap: 0.6rem;
+  align-items: center;
+  font-size: 0.875rem;
+}
+.receipt-items small {
+  display: block;
+  color: #d6b994;
+}
+.receipt-items li > span,
+.receipt .summary > div:last-child dd {
+  color: #dc9657;
+  font-weight: bold;
+}
+.receipt-note {
+  font-size: 0.85rem;
+  color: #d6b994;
+}
+.receipt-reference {
+  margin: 1.25rem 0;
+}
+.receipt-reference summary {
+  cursor: pointer;
+}
+.receipt > a:last-child {
+  display: block;
+  text-align: center;
+}

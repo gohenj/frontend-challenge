@@ -1276,8 +1276,13 @@ function Receipt() {
     return <Failure error={order.error} retry={order.refetch} />;
   const { status, quote, transaction } = order.data;
   return (
-    <section className="panel narrow">
-      <div role="status">
+    <section className="panel narrow receipt">
+      <div className="receipt-heading" role="status">
+        {status === "confirmed" && (
+          <span className="receipt-mark" aria-hidden="true">
+            ✓
+          </span>
+        )}
         <h1>
           {
             {
@@ -1290,15 +1295,33 @@ function Receipt() {
       </div>
       {status === "confirmed" && (
         <>
-          <p className="break-all">Transação simulada {transaction}</p>
-          <ul>
+          <p className="receipt-order">
+            Pedido <span>{id}</span>
+          </p>
+          <h2>Detalhes da transação</h2>
+          <ul className="receipt-items">
             {quote.items.map((i) => (
               <li key={i.id}>
-                {i.quantity} × {i.nft.name} · {i.nft.price} ETH
+                <Art nft={i.nft} />
+                <div>
+                  <strong>
+                    {i.quantity} × {i.nft.name}
+                  </strong>
+                  <small>ID do token: #{i.id.padStart(4, "0")}</small>
+                </div>
+                <span>{i.nft.price} ETH</span>
               </li>
             ))}
           </ul>
           <Summary quote={quote} />
+          <p className="receipt-note">
+            Pagamento confirmado na simulação. A transação fica disponível neste
+            recibo.
+          </p>
+          <details className="receipt-reference">
+            <summary className="button">Ver transação simulada</summary>
+            <p className="break-all">{transaction}</p>
+          </details>
         </>
       )}
       <Link to={status === "declined" ? "/cart" : "/"} search={defaultSearch}>
