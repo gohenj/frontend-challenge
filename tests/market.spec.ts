@@ -119,7 +119,7 @@ test("pagamento recusado conserva os itens", async ({ page }) => {
   ).toBeVisible();
   await page.getByRole("link", { name: "Voltar ao carrinho" }).click();
   await expect(
-    page.getByRole("link", { name: "Onça Espectral" }),
+    page.getByRole("link", { name: "Onça Espectral", exact: true }),
   ).toBeVisible();
 });
 test("favorito faz rollback e fica isolado por conta", async ({ page }) => {
@@ -178,3 +178,19 @@ test("regressão visual das telas principais", async ({ page }) => {
     animations: "disabled",
   });
 });
+
+test("login social abre sobre a home e retoma o checkout", async ({ page }) => {
+  await add(page);
+  await page.getByRole("link", { name: "Conectar e finalizar" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Continuar com Google" }).click();
+  await expect(page.getByRole("heading", { name: "Pagamento" })).toBeVisible();
+  await expect(page.getByText("0.1250 ETH")).toBeVisible();
+  await page.getByRole("button", { name: "Sair" }).click();
+  await page.getByRole("link", { name: "Entrar", exact: true }).click();
+  await dialog.getByRole("button", { name: "Continuar com Facebook" }).click();
+  await page.getByRole("link", { name: "Perfil", exact: true }).click();
+  await expect(page.getByLabel("E-mail")).toHaveValue("outra@jungle.test");
+});
+

@@ -160,263 +160,279 @@ const settle = (purchase: Purchase) => {
   save();
   emit("order.updated", order.id, order.version, purchase.owner);
 };
-const api = http.all(import.meta.env.BASE_URL + "api/*", async ({ request }) => {
-  const url = new URL(request.url);
-  const path = url.pathname.slice(import.meta.env.BASE_URL.length + 4);
-  const method = request.method;
-  const body =
-    method === "GET" || method === "DELETE"
-      ? {}
-      : ((await request.json()) as Record<string, string | number>);
-  if (path === "demo") {
-    scenario = String(body.scenario);
-    if (scenario === "reset") {
-      state = seed();
-      scenario = "default";
-      save();
-    }
-    if (scenario === "expire" && state.session) {
-      state.session.expires = 0;
-      save();
-    }
-    if (scenario === "price" || scenario === "stock") {
-      const nft =
-        state.nfts.find((n) => n.id === cart().lines[0]?.id) ?? state.nfts[0];
-      if (scenario === "price") nft.price = decimal(units(nft.price) + 100n);
-      else nft.stock = 0;
-      nft.version++;
-      save();
-      emit("nft.updated", nft.id, nft.version);
-    }
-    return json({ scenario });
-  }
-  if (scenario === "slow") await delay(1400);
-  if (scenario === "variable" && path === "nfts")
-    await delay((url.searchParams.get("q")?.length ?? 0) < 3 ? 900 : 100);
-  if (scenario === "offline") return HttpResponse.error();
-  if (scenario === "error") return err(503, "Serviço indisponível.");
-  const current = user();
-  if (path === "session" && method === "GET")
-    return current ? json(profile(current)) : err(401, "Entre para continuar.");
-  if (path === "session" && method === "DELETE") {
-    state.session = null;
-    state.cart = { lines: [], coupon: "" };
-    save();
-    return json(null);
-  }
-  if (path === "login" || path === "register") {
-    const email = String(body.email ?? "")
-      .trim()
-      .toLowerCase();
-    const password = String(body.password ?? "");
-    const name = String(body.name ?? "").trim();
-    if (!/^\S+@\S+\.\S+$/.test(email) || password.length < 8)
-      return err(422, "Informe um e-mail válido e uma senha de 8 caracteres.");
-    if (!state.accounts.length)
-      state.accounts = await Promise.all([
-        account("demo@jungle.test", "jungle123", "Alex Silva"),
-        account("outra@jungle.test", "jungle123", "Marina Costa"),
-      ]);
-    let match = state.accounts.find((a) => a.email === email);
-    if (path === "register") {
-      if (match) return err(409, "E-mail já cadastrado.");
-      if (!name) return err(422, "Informe seu nome.");
-      match = await account(email, password, name);
-      state.accounts.push(match);
-    }
-    if (!match || match.hash !== (await hash(email, password)))
-      return err(401, "Credenciais inválidas.");
-    if (state.cart.lines.length) {
-      const target = cart(match.id);
-      for (const line of state.cart.lines) {
-        const existing = target.lines.find((item) => item.id === line.id);
-        const stock = state.nfts.find((nft) => nft.id === line.id)!.stock;
-        if (existing)
-          existing.quantity = Math.min(
-            existing.quantity + line.quantity,
-            stock,
-          );
-        else if (stock)
-          target.lines.push({
-            ...line,
-            quantity: Math.min(line.quantity, stock),
-          });
+const api = http.all(
+  import.meta.env.BASE_URL + "api/*",
+  async ({ request }) => {
+    const url = new URL(request.url);
+    const path = url.pathname.slice(import.meta.env.BASE_URL.length + 4);
+    const method = request.method;
+    const body =
+      method === "GET" || method === "DELETE"
+        ? {}
+        : ((await request.json()) as Record<string, string | number>);
+    if (path === "demo") {
+      scenario = String(body.scenario);
+      if (scenario === "reset") {
+        state = seed();
+        scenario = "default";
+        save();
       }
-      target.lines = target.lines.filter((line) => line.quantity > 0);
-      target.coupon = state.cart.coupon || target.coupon;
-      state.cart = emptyCart();
+      if (scenario === "expire" && state.session) {
+        state.session.expires = 0;
+        save();
+      }
+      if (scenario === "price" || scenario === "stock") {
+        const nft =
+          state.nfts.find((n) => n.id === cart().lines[0]?.id) ?? state.nfts[0];
+        if (scenario === "price") nft.price = decimal(units(nft.price) + 100n);
+        else nft.stock = 0;
+        nft.version++;
+        save();
+        emit("nft.updated", nft.id, nft.version);
+      }
+      return json({ scenario });
     }
-    state.session = { id: match.id, expires: Date.now() + 3600000 };
-    save();
-    return json(profile(match));
-  }
-  if (path === "nfts") {
-    const p = url.searchParams;
-    const q = (p.get("q") ?? "").toLocaleLowerCase();
-    const category = p.get("category");
-    const items = state.nfts.filter(
-      (n) =>
-        n.name.toLocaleLowerCase().includes(q) &&
-        (!category || n.category === category) &&
-        (p.get("available") !== "true" || n.stock > 0),
-    );
-    if (p.get("sort") === "price")
-      items.sort((a, b) => Number(units(a.price) - units(b.price)));
-    const page = Math.max(1, Number(p.get("page")) || 1);
-    return json({
-      items: items.slice((page - 1) * 6, page * 6),
-      pages: Math.ceil(items.length / 6),
-    });
-  }
-  if (path.startsWith("nfts/")) {
-    const nft = state.nfts.find((n) => n.id === path.slice(5));
-    return nft ? json(nft) : err(404, "NFT não encontrado.");
-  }
-  if (path === "cart") {
-    if (method !== "GET") {
-      const nft = state.nfts.find((n) => n.id === body.id);
-      const quantity = Number(body.quantity);
-      if (
-        !nft ||
-        !Number.isInteger(quantity) ||
-        quantity < 0 ||
-        (quantity > nft.stock && quantity !== 0)
-      )
-        return err(409, "Quantidade indisponível.");
-      cart().lines = cart().lines.filter((l) => l.id !== nft.id);
-      if (quantity) cart().lines.push({ id: nft.id, quantity });
+    if (scenario === "slow") await delay(1400);
+    if (scenario === "variable" && path === "nfts")
+      await delay((url.searchParams.get("q")?.length ?? 0) < 3 ? 900 : 100);
+    if (scenario === "offline") return HttpResponse.error();
+    if (scenario === "error") return err(503, "Serviço indisponível.");
+    const current = user();
+    if (path === "session" && method === "GET")
+      return current
+        ? json(profile(current))
+        : err(401, "Entre para continuar.");
+    if (path === "session" && method === "DELETE") {
+      state.session = null;
+      state.cart = { lines: [], coupon: "" };
       save();
+      return json(null);
     }
-    return json(cart());
-  }
-  if (path === "quote") {
-    if (method !== "GET") {
-      const coupon = String(body.coupon ?? "")
+    if (path === "login" || path === "register" || path === "social-login") {
+      const social = path === "social-login";
+      const provider = body.provider;
+      if (social && provider !== "google" && provider !== "facebook")
+        return err(422, "Provedor inválido.");
+      const demoEmail =
+        provider === "google" ? "demo@jungle.test" : "outra@jungle.test";
+      const email = String(social ? demoEmail : (body.email ?? ""))
         .trim()
-        .toUpperCase();
-      if (coupon && coupon !== "JUNGLE10")
+        .toLowerCase();
+      const password = String(body.password ?? "");
+      const name = String(body.name ?? "").trim();
+      if (!social && (!/^\S+@\S+\.\S+$/.test(email) || password.length < 8))
         return err(
           422,
-          coupon === "EXPIRED" ? "Cupom expirado." : "Cupom inválido.",
+          "Informe um e-mail válido e uma senha de 8 caracteres.",
         );
-      cart().coupon = coupon;
+      if (!state.accounts.length)
+        state.accounts = await Promise.all([
+          account("demo@jungle.test", "jungle123", "Alex Silva"),
+          account("outra@jungle.test", "jungle123", "Marina Costa"),
+        ]);
+      let match = state.accounts.find((a) => a.email === email);
+      if (path === "register") {
+        if (match) return err(409, "E-mail já cadastrado.");
+        if (!name) return err(422, "Informe seu nome.");
+        match = await account(email, password, name);
+        state.accounts.push(match);
+      }
+      if (!match || (!social && match.hash !== (await hash(email, password))))
+        return err(401, "Credenciais inválidas.");
+      if (state.cart.lines.length) {
+        const target = cart(match.id);
+        for (const line of state.cart.lines) {
+          const existing = target.lines.find((item) => item.id === line.id);
+          const stock = state.nfts.find((nft) => nft.id === line.id)!.stock;
+          if (existing)
+            existing.quantity = Math.min(
+              existing.quantity + line.quantity,
+              stock,
+            );
+          else if (stock)
+            target.lines.push({
+              ...line,
+              quantity: Math.min(line.quantity, stock),
+            });
+        }
+        target.lines = target.lines.filter((line) => line.quantity > 0);
+        target.coupon = state.cart.coupon || target.coupon;
+        state.cart = emptyCart();
+      }
+      state.session = { id: match.id, expires: Date.now() + 3600000 };
       save();
+      return json(profile(match));
     }
-    return json(quote());
-  }
-  if (!current) return err(401, "Sua sessão precisa ser renovada.");
-  if (path === "favorites") {
-    if (method !== "GET") {
-      if (scenario === "favorite-error")
-        return err(503, "Não foi possível salvar o favorito.");
-      const id = String(body.id);
-      if (!state.nfts.some((n) => n.id === id))
-        return err(404, "NFT não encontrado.");
-      current.favorites = current.favorites.includes(id)
-        ? current.favorites.filter((f) => f !== id)
-        : [...current.favorites, id];
-      save();
+    if (path === "nfts") {
+      const p = url.searchParams;
+      const q = (p.get("q") ?? "").toLocaleLowerCase();
+      const category = p.get("category");
+      const items = state.nfts.filter(
+        (n) =>
+          n.name.toLocaleLowerCase().includes(q) &&
+          (!category || n.category === category) &&
+          (p.get("available") !== "true" || n.stock > 0),
+      );
+      if (p.get("sort") === "price")
+        items.sort((a, b) => Number(units(a.price) - units(b.price)));
+      const page = Math.max(1, Number(p.get("page")) || 1);
+      return json({
+        items: items.slice((page - 1) * 6, page * 6),
+        pages: Math.ceil(items.length / 6),
+      });
     }
-    return json(current.favorites);
-  }
-  if (path === "profile") {
-    if (method !== "GET") {
-      if (!String(body.name ?? "").trim()) return err(422, "Informe seu nome.");
-      if (body.password) {
+    if (path.startsWith("nfts/")) {
+      const nft = state.nfts.find((n) => n.id === path.slice(5));
+      return nft ? json(nft) : err(404, "NFT não encontrado.");
+    }
+    if (path === "cart") {
+      if (method !== "GET") {
+        const nft = state.nfts.find((n) => n.id === body.id);
+        const quantity = Number(body.quantity);
         if (
-          current.hash !== (await hash(current.email, String(body.previous))) ||
-          String(body.password).length < 8
+          !nft ||
+          !Number.isInteger(quantity) ||
+          quantity < 0 ||
+          (quantity > nft.stock && quantity !== 0)
         )
+          return err(409, "Quantidade indisponível.");
+        cart().lines = cart().lines.filter((l) => l.id !== nft.id);
+        if (quantity) cart().lines.push({ id: nft.id, quantity });
+        save();
+      }
+      return json(cart());
+    }
+    if (path === "quote") {
+      if (method !== "GET") {
+        const coupon = String(body.coupon ?? "")
+          .trim()
+          .toUpperCase();
+        if (coupon && coupon !== "JUNGLE10")
           return err(
             422,
-            "Confira a senha atual e informe uma nova senha com 8 caracteres.",
+            coupon === "EXPIRED" ? "Cupom expirado." : "Cupom inválido.",
           );
-        current.hash = await hash(current.email, String(body.password));
+        cart().coupon = coupon;
+        save();
       }
-      current.name = String(body.name).trim();
-      current.avatar = String(body.avatar ?? "");
-      save();
+      return json(quote());
     }
-    return json(profile(current));
-  }
-  if (path === "wallets") {
-    if (method !== "GET") {
-      const address = String(body.address ?? "");
-      const secondary = String(body.secondary ?? "");
-      const valid = /^0x[\da-f]{40}$/i;
+    if (!current) return err(401, "Sua sessão precisa ser renovada.");
+    if (path === "favorites") {
+      if (method !== "GET") {
+        if (scenario === "favorite-error")
+          return err(503, "Não foi possível salvar o favorito.");
+        const id = String(body.id);
+        if (!state.nfts.some((n) => n.id === id))
+          return err(404, "NFT não encontrado.");
+        current.favorites = current.favorites.includes(id)
+          ? current.favorites.filter((f) => f !== id)
+          : [...current.favorites, id];
+        save();
+      }
+      return json(current.favorites);
+    }
+    if (path === "profile") {
+      if (method !== "GET") {
+        if (!String(body.name ?? "").trim())
+          return err(422, "Informe seu nome.");
+        if (body.password) {
+          if (
+            current.hash !==
+              (await hash(current.email, String(body.previous))) ||
+            String(body.password).length < 8
+          )
+            return err(
+              422,
+              "Confira a senha atual e informe uma nova senha com 8 caracteres.",
+            );
+          current.hash = await hash(current.email, String(body.password));
+        }
+        current.name = String(body.name).trim();
+        current.avatar = String(body.avatar ?? "");
+        save();
+      }
+      return json(profile(current));
+    }
+    if (path === "wallets") {
+      if (method !== "GET") {
+        const address = String(body.address ?? "");
+        const secondary = String(body.secondary ?? "");
+        const valid = /^0x[\da-f]{40}$/i;
+        if (
+          !valid.test(address) ||
+          (secondary &&
+            (!valid.test(secondary) ||
+              secondary.toLowerCase() === address.toLowerCase()))
+        )
+          return err(422, "Informe endereços Ethereum válidos e distintos.");
+        current.wallet = { address, secondary };
+        save();
+      }
+      return json(current.wallet);
+    }
+    if (path === "orders" && method === "POST") {
+      const attempt = request.headers.get("Idempotency-Key");
+      if (!attempt) return err(422, "Tentativa sem identificação.");
+      const index = current.id + ":" + attempt;
+      const payload = JSON.stringify(body);
+      const previous = state.orders[index];
+      if (previous) {
+        settle(previous);
+        return previous.payload === payload
+          ? json(previous.order)
+          : err(409, "Tentativa já usada com outros dados.");
+      }
+      const snapshot = structuredClone(quote());
       if (
-        !valid.test(address) ||
-        (secondary &&
-          (!valid.test(secondary) ||
-            secondary.toLowerCase() === address.toLowerCase()))
+        snapshot.signature !== body.signature ||
+        !snapshot.items.length ||
+        snapshot.items.some((i) => i.quantity > i.nft.stock)
       )
-        return err(422, "Informe endereços Ethereum válidos e distintos.");
-      current.wallet = { address, secondary };
+        return err(409, "A cotação mudou. Confira o carrinho.");
+      if (
+        !body.name ||
+        body.email !== current.email ||
+        !body.wallet ||
+        ![current.wallet.address, current.wallet.secondary].includes(
+          String(body.wallet),
+        ) ||
+        !["Ethereum", "Polygon"].includes(String(body.network))
+      )
+        return err(422, "Confira os dados de pagamento.");
+      const purchase: Purchase = {
+        owner: current.id,
+        payload,
+        due: Date.now() + 900,
+        decline: scenario === "decline",
+        order: {
+          id: crypto.randomUUID(),
+          status: "pending",
+          quote: snapshot,
+          transaction: "0x" + crypto.randomUUID().replaceAll("-", ""),
+          version: 1,
+        },
+      };
+      state.orders[index] = purchase;
       save();
+      setTimeout(() => settle(purchase), 950);
+      if (scenario === "timeout") {
+        scenario = "default";
+        await delay(7000);
+      }
+      return json(purchase.order);
     }
-    return json(current.wallet);
-  }
-  if (path === "orders" && method === "POST") {
-    const attempt = request.headers.get("Idempotency-Key");
-    if (!attempt) return err(422, "Tentativa sem identificação.");
-    const index = current.id + ":" + attempt;
-    const payload = JSON.stringify(body);
-    const previous = state.orders[index];
-    if (previous) {
-      settle(previous);
-      return previous.payload === payload
-        ? json(previous.order)
-        : err(409, "Tentativa já usada com outros dados.");
+    if (path.startsWith("orders/")) {
+      const purchase = Object.values(state.orders).find(
+        (p) => p.owner === current.id && p.order.id === path.slice(7),
+      );
+      if (!purchase) return err(404, "Pedido não encontrado.");
+      settle(purchase);
+      return json(purchase.order);
     }
-    const snapshot = structuredClone(quote());
-    if (
-      snapshot.signature !== body.signature ||
-      !snapshot.items.length ||
-      snapshot.items.some((i) => i.quantity > i.nft.stock)
-    )
-      return err(409, "A cotação mudou. Confira o carrinho.");
-    if (
-      !body.name ||
-      body.email !== current.email ||
-      !body.wallet ||
-      ![current.wallet.address, current.wallet.secondary].includes(
-        String(body.wallet),
-      ) ||
-      !["Ethereum", "Polygon"].includes(String(body.network))
-    )
-      return err(422, "Confira os dados de pagamento.");
-    const purchase: Purchase = {
-      owner: current.id,
-      payload,
-      due: Date.now() + 900,
-      decline: scenario === "decline",
-      order: {
-        id: crypto.randomUUID(),
-        status: "pending",
-        quote: snapshot,
-        transaction: "0x" + crypto.randomUUID().replaceAll("-", ""),
-        version: 1,
-      },
-    };
-    state.orders[index] = purchase;
-    save();
-    setTimeout(() => settle(purchase), 950);
-    if (scenario === "timeout") {
-      scenario = "default";
-      await delay(7000);
-    }
-    return json(purchase.order);
-  }
-  if (path.startsWith("orders/")) {
-    const purchase = Object.values(state.orders).find(
-      (p) => p.owner === current.id && p.order.id === path.slice(7),
-    );
-    if (!purchase) return err(404, "Pedido não encontrado.");
-    settle(purchase);
-    return json(purchase.order);
-  }
-  return err(404, "Recurso não encontrado.");
-});
+    return err(404, "Recurso não encontrado.");
+  },
+);
 export const worker = setupWorker(
   api,
   socket.addEventListener("connection", (connection) => {
@@ -429,4 +445,3 @@ export const worker = setupWorker(
     connection.client.addEventListener("close", () => peers.delete(peer));
   }),
 );
-

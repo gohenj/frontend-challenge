@@ -267,9 +267,12 @@ const home = createRoute({
 });
 function Home() {
   const search = home.useSearch();
-  const navigate = home.useNavigate();
+  return <HomeContent search={search} />;
+}
+function HomeContent({ search }: { search: Search }) {
+  const navigate = useNavigate();
   const update = (patch: Partial<Search>) =>
-    navigate({ search: { ...search, page: 1, ...patch } });
+    navigate({ to: "/", search: { ...search, page: 1, ...patch } });
   const catalog = useQuery({
     queryKey: ["nfts", search],
     queryFn: ({ signal }) =>
@@ -915,7 +918,10 @@ function Auth({ register: create }: { register?: boolean }) {
   const { next } = useNavigateSearch();
   const action = useMutation({
     mutationFn: (body: Record<string, FormDataEntryValue>) =>
-      post<User>(create ? "/register" : "/login", body),
+      post<User>(
+        body.provider ? "/social-login" : create ? "/register" : "/login",
+        body,
+      ),
     onSuccess: async (user) => {
       await client.cancelQueries();
       client.removeQueries({
@@ -926,45 +932,91 @@ function Auth({ register: create }: { register?: boolean }) {
     },
   });
   return (
-    <section className="panel narrow">
-      <h1>{create ? "Criar conta" : "Entrar"}</h1>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          action.mutate(Object.fromEntries(new FormData(e.currentTarget)));
+    <>
+      <HomeContent search={defaultSearch} />
+      <Dialog.Root
+        open
+        onOpenChange={(open) => {
+          if (!open) void router.navigate({ to: "/", search: defaultSearch });
         }}
       >
-        {create && (
-          <label>
-            Nome
-            <input name="name" required autoComplete="name" />
-          </label>
-        )}
-        <label>
-          E-mail
-          <input name="email" type="email" required autoComplete="email" />
-        </label>
-        <label>
-          Senha
-          <input
-            name="password"
-            type="password"
-            required
-            minLength={8}
-            autoComplete={create ? "new-password" : "current-password"}
-          />
-        </label>
-        {feedback(action.error)}
-        <Button disabled={action.isPending}>
-          {create ? "Cadastrar" : "Entrar"}
-        </Button>
-      </form>
-      <p>
-        <Link to={create ? "/login" : "/register"} search={{ next }}>
-          {create ? "Já tenho conta" : "Criar conta"}
-        </Link>
-      </p>
-    </section>
+        <Dialog.Portal>
+          <Dialog.Overlay className="auth-overlay" />
+          <Dialog.Content className="auth-dialog">
+            <Dialog.Close className="auth-close" aria-label="Fechar">
+              ×
+            </Dialog.Close>
+            <div className="auth-heading">
+              <Dialog.Title>{create ? "Criar conta" : "Entrar"}</Dialog.Title>
+              <Link to={create ? "/login" : "/register"} search={{ next }}>
+                {create ? "Entrar" : "Criar conta"}
+              </Link>
+            </div>
+            <Dialog.Description>
+              {create
+                ? "Crie seu perfil de colecionador e conecte uma carteira quando quiser."
+                : "Entre para gerenciar sua carteira, coleção e perfil de criador."}
+            </Dialog.Description>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                action.mutate(
+                  Object.fromEntries(new FormData(e.currentTarget)),
+                );
+              }}
+            >
+              {create && (
+                <label>
+                  Nome
+                  <input name="name" required autoComplete="name" />
+                </label>
+              )}
+              <label>
+                <span className="sr-only">E-mail</span>
+                <input
+                  name="email"
+                  type="email"
+                  placeholder="contato@email.com"
+                  required
+                  autoComplete="email"
+                />
+              </label>
+              <label>
+                <span className="sr-only">Senha</span>
+                <input
+                  name="password"
+                  placeholder="Senha"
+                  type="password"
+                  required
+                  minLength={8}
+                  autoComplete={create ? "new-password" : "current-password"}
+                />
+              </label>
+              {feedback(action.error)}
+              <Button disabled={action.isPending}>
+                {create ? "Cadastrar" : "Entrar"}
+              </Button>
+            </form>
+            <div className="auth-social">
+              <p>Ou continue com</p>
+              <button
+                disabled={action.isPending}
+                onClick={() => action.mutate({ provider: "google" })}
+              >
+                <span aria-hidden="true">G</span> Continuar com Google
+              </button>
+              <button
+                disabled={action.isPending}
+                onClick={() => action.mutate({ provider: "facebook" })}
+              >
+                <span aria-hidden="true">f</span> Continuar com Facebook
+              </button>
+              <small>Login simulado com contas de teste.</small>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+    </>
   );
 }
 function useNavigateSearch() {

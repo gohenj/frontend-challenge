@@ -1064,3 +1064,76 @@ main:has(.home-journal) {
   display: block;
   text-align: center;
 }
+
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  background: #150d0950;
+}
+.auth-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-height: calc(100dvh - 2rem);
+  overflow: auto;
+  width: min(500px, calc(100% - 2rem));
+  background: #241711;
+  border-bottom: 0.6rem solid #dc9657;
+  padding: 2.7rem clamp(1rem, 5vw, 4.5rem);
+  text-align: center;
+}
+.auth-close {
+  position: absolute;
+  right: 0.6rem;
+  top: 0.5rem;
+  color: #dc9657;
+  background: none;
+  border: 0;
+  font-size: 1.35rem;
+  padding: 0.25rem 0.5rem;
+}
+.auth-heading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: clamp(1rem, 4vw, 1.3rem);
+}
+.auth-heading h2 {
+  color: #dc9657;
+  font-size: inherit;
+  margin: 0;
+}
+.auth-heading a {
+  border-left: 1px solid #805639;
+  padding-left: 0.65rem;
+}
+.auth-dialog p {
+  font-size: 0.85rem;
+}
+.auth-dialog input {
+  background: transparent;
+}
+.auth-social {
+  display: grid;
+  gap: 0.65rem;
+}
+.auth-social button {
+  background: transparent;
+  color: #d6b994;
+}
+.auth-social span {
+  color: #83aeff;
+  font-weight: bold;
+  margin-right: 0.4rem;
+}
+@media (max-width: 600px) {
+  .auth-dialog {
+    inset: 0;
+    transform: none;
+    width: 100%;
+    max-height: none;
+    padding-top: 4rem;
+  }
+}
