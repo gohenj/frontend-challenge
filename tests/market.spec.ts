@@ -340,3 +340,47 @@ test("login mantém o foco no diálogo e fecha com Escape", async ({ page }) => 
   await expect(dialog).toHaveCount(0);
   await expect(entry).toBeVisible();
 });
+
+test("pedido pendente mantém o mesmo recibo após recarregar", async ({
+  page,
+}) => {
+  const start = new Date();
+  await page.clock.setFixedTime(start);
+  await checkout(page);
+  await review(page);
+  await confirm(page);
+  await expect(
+    page.getByRole("heading", { name: "Pagamento pendente" }),
+  ).toBeVisible();
+  const receiptUrl = page.url();
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Pagamento pendente" }),
+  ).toBeVisible();
+  await page.clock.setFixedTime(new Date(start.getTime() + 2000));
+  await expect(
+    page.getByRole("heading", { name: "Compra confirmada" }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(receiptUrl);
+});
+
+test("NFT favoritado aparece na lista de interesse após recarregar", async ({
+  page,
+}) => {
+  await page.goto("/login");
+  await signIn(page);
+  await expect(
+    page.getByRole("link", { name: "Perfil", exact: true }),
+  ).toBeVisible();
+  await page.goto("/nft/1");
+  const favorite = page.getByRole("button", { name: "Favorito", exact: true });
+  await favorite.click();
+  await expect(favorite).toBeEnabled();
+  await expect(favorite).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("link", { name: "Perfil", exact: true }).click();
+  await page.getByRole("link", { name: "Lista de interesse" }).click();
+  const nft = page.getByRole("heading", { name: "Onça Espectral" });
+  await expect(nft).toBeVisible();
+  await page.reload();
+  await expect(nft).toBeVisible();
+});
