@@ -556,12 +556,22 @@ function CartPage() {
           </Link>
         </p>
       ) : (
-        <div className="split">
-          <section>
+        <div className="split cart-layout">
+          <section aria-label="Itens do carrinho">
+            <div className="cart-columns" aria-hidden="true">
+              <span>NFT</span>
+              <span>Preço</span>
+              <span>Quantidade</span>
+            </div>
             {quote.data.items.map((item) => (
               <article className="line" key={item.id}>
-                <Link to="/nft/$id" params={{ id: item.id }}>
-                  {item.nft.name}
+                <Link
+                  className="purchase-item"
+                  to="/nft/$id"
+                  params={{ id: item.id }}
+                >
+                  <Art nft={item.nft} />
+                  <span>{item.nft.name}</span>
                 </Link>
                 <span>{item.nft.price} ETH</span>
                 <div>
@@ -598,8 +608,8 @@ function CartPage() {
             ))}
             {feedback(edit.error)}
           </section>
-          <section className="panel">
-            <h2>Resumo</h2>
+          <section className="panel purchase-summary">
+            <h2>Resumo do carrinho</h2>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -816,7 +826,7 @@ function Checkout() {
       )}
       {feedback(submit.error)}
       {quote.data && (
-        <div className="split">
+        <div className="split checkout-layout">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -897,8 +907,21 @@ function Checkout() {
               Revisar pedido
             </Button>
           </form>
-          <section className="panel">
-            <h2>Resumo</h2>
+          <section className="panel purchase-summary">
+            <h2>Seus NFTs</h2>
+            <ul className="checkout-items">
+              {quote.data.items.map(({ nft, quantity }) => (
+                <li className="purchase-item" key={nft.id}>
+                  <Art nft={nft} />
+                  <span>
+                    {nft.name}
+                    <small>
+                      {quantity} × {nft.price} ETH
+                    </small>
+                  </span>
+                </li>
+              ))}
+            </ul>
             <Summary quote={quote.data} />
           </section>
         </div>
