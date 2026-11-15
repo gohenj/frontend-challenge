@@ -493,6 +493,14 @@ function Home() {
           ))}
         </div>
       </section>
+      <KurioInfo />
+    </>
+  );
+}
+function KurioInfo() {
+  return (
+    <>
+      {" "}
       <section className="home-info" aria-label="Sobre a Kurio">
         {[
           [
@@ -718,6 +726,10 @@ const cartRoute = createRoute({
   component: CartPage,
 });
 function CartPage() {
+  const recommendations = useQuery({
+    queryKey: ["nfts", "related"],
+    queryFn: ({ signal }) => get<Catalog>("/nfts", signal),
+  });
   const quote = useResource<Quote>("quote");
   const edit = useMutation({
     mutationFn: (line: { id: string; quantity: number }) => post("/cart", line),
@@ -731,7 +743,7 @@ function CartPage() {
   if (quote.isError)
     return <Failure error={quote.error} retry={quote.refetch} />;
   return (
-    <>
+    <div className="cart-page">
       <h1>Carrinho</h1>
       {!quote.data.items.length ? (
         <p>
@@ -821,12 +833,37 @@ function CartPage() {
             {feedback(coupon.error)}
             <Summary quote={quote.data} />
             <Link className="button" to="/checkout">
-              Ir para pagamento
+              Conectar e finalizar
+            </Link>
+            <Link className="continue-shopping" to="/" search={defaultSearch}>
+              Continuar explorando
             </Link>
           </section>
         </div>
       )}
-    </>
+      <section className="detail-section cart-recommendations">
+        <h2>Colecionadores também viram</h2>
+        {recommendations.isPending && <Loading />}
+        {recommendations.isError && (
+          <Failure
+            error={recommendations.error}
+            retry={recommendations.refetch}
+          />
+        )}
+        <div className="detail-related">
+          {recommendations.data?.items.slice(0, 5).map((nft) => (
+            <Link key={nft.id} to="/nft/$id" params={{ id: nft.id }}>
+              <div className="recommendation-art">
+                <Art nft={nft} />
+              </div>
+              <span>{nft.name}</span>
+              <strong>{nft.price} ETH</strong>
+            </Link>
+          ))}
+        </div>
+      </section>
+      <KurioInfo />
+    </div>
   );
 }
 const privateRoute = async ({ location }: { location: { href: string } }) => {

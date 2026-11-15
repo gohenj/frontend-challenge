@@ -21,7 +21,7 @@ const add = async (page: Page) => {
 };
 const checkout = async (page: Page) => {
   await add(page);
-  await page.getByRole("link", { name: "Ir para pagamento" }).click();
+  await page.getByRole("link", { name: "Conectar e finalizar" }).click();
   await signIn(page);
   await expect(page.getByRole("heading", { name: "Pagamento" })).toBeVisible();
   await page
@@ -170,7 +170,7 @@ test("regressão visual das telas principais", async ({ page }) => {
     fullPage: true,
     animations: "disabled",
   });
-  await page.getByRole("link", { name: "Ir para pagamento" }).click();
+  await page.getByRole("link", { name: "Conectar e finalizar" }).click();
   await signIn(page);
   await expect(page.getByRole("option", { name: /0x111/ })).toBeAttached();
   await expect(page).toHaveScreenshot("pagamento.png", {
@@ -178,4 +178,3 @@ test("regressão visual das telas principais", async ({ page }) => {
     animations: "disabled",
   });
 });
-

@@ -839,3 +839,43 @@ main:has(.home-journal) {
     gap: 0.9rem;
   }
 }
+
+.cart-page {
+  max-width: 1125px;
+  margin-inline: auto;
+}
+.cart-page .cart-layout {
+  grid-template-columns: minmax(0, 2.35fr) minmax(15rem, 1fr);
+  gap: clamp(1rem, 5.5vw, 5rem);
+}
+.cart-page .purchase-summary {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.cart-page .summary > div:last-child dd {
+  color: #dc9657;
+}
+.continue-shopping {
+  display: block;
+  text-align: center;
+  margin-top: 0.7rem;
+  color: #dc9657;
+}
+.cart-recommendations .recommendation-art {
+  display: grid;
+  align-items: center;
+  aspect-ratio: 0.86;
+  background: #241711;
+  margin-bottom: 0.5rem;
+}
+.cart-recommendations .recommendation-art img {
+  margin: 0;
+  border: 0;
+  padding: 0.25rem;
+}
+@media (max-width: 700px) {
+  .cart-page .cart-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
