@@ -194,3 +194,149 @@ test("login social abre sobre a home e retoma o checkout", async ({ page }) => {
   await expect(page.getByLabel("E-mail")).toHaveValue("outra@jungle.test");
 });
 
+test("cadastro valida senha, cria sessão e rejeita e-mail repetido", async ({
+  page,
+}) => {
+  await page.goto("/register");
+  const dialog = page.getByRole("dialog");
+  const email = "nova@jungle.test";
+  async function fill(confirmation: string) {
+    await dialog.getByLabel("Nome de usuário").fill("Nova Pessoa");
+    await dialog.getByLabel("E-mail").fill(email);
+    await dialog.getByLabel("Senha", { exact: true }).fill("jungle123");
+    await dialog.getByLabel("Confirmar senha").fill(confirmation);
+    await dialog
+      .getByRole("button", { name: "Criar conta", exact: true })
+      .click();
+  }
+  await fill("different123");
+  await expect(dialog.getByRole("alert")).toContainText(
+    "As senhas precisam ser iguais",
+  );
+  await fill("jungle123");
+  await expect(
+    page.getByRole("link", { name: "Perfil", exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "Sair", exact: true }).click();
+  await expect(
+    page.getByRole("link", { name: "Entrar", exact: true }),
+  ).toBeVisible();
+  await page.goto("/register");
+  await fill("jungle123");
+  await expect(dialog.getByRole("alert")).toContainText("E-mail já cadastrado");
+});
+
+test("sessão expirada bloqueia perfil e permite retomar", async ({ page }) => {
+  await page.goto("/profile");
+  await signIn(page);
+  await expect(
+    page.getByRole("heading", { name: "Perfil", exact: true }),
+  ).toBeVisible();
+  await scenario(page, "expire");
+  await page.reload();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await signIn(page);
+  await expect(
+    page.getByRole("heading", { name: "Perfil", exact: true }),
+  ).toBeVisible();
+});
+
+test("carteira secundária valida endereço e persiste após recarregar", async ({
+  page,
+}) => {
+  await page.goto("/wallets");
+  await signIn(page);
+  const secondary = page.getByLabel("Carteira secundária");
+  const save = page.getByRole("button", { name: "Salvar carteiras" });
+  await secondary.fill("inválida");
+  await save.click();
+  await expect(page.getByRole("alert")).toBeVisible();
+  const address = "0x" + "2".repeat(40);
+  await secondary.fill(address);
+  await save.click();
+  await expect(page.getByText("Carteiras salvas.")).toBeVisible();
+  await page.reload();
+  await expect(secondary).toHaveValue(address);
+});
+
+test("catálogo mostra carregamento, erro e recuperação", async ({ page }) => {
+  await page.goto("/");
+  const heading = page.getByRole("heading", { name: "Onça Espectral" });
+  await expect(heading).toBeVisible();
+  await scenario(page, "slow");
+  await page.getByRole("button", { name: "Próxima" }).click();
+  await expect(page.getByLabel("Carregando")).toBeVisible();
+  await expect(page.getByText("Página 2 de 2")).toBeVisible();
+  await scenario(page, "error");
+  await page.getByRole("button", { name: "Anterior" }).click();
+  await expect(page.getByRole("alert")).toContainText("Serviço indisponível");
+  await scenario(page, "default");
+  await page.getByRole("button", { name: "Tentar novamente" }).click();
+  await expect(heading).toBeVisible();
+});
+
+test("cupom inválido, aplicação, quantidade e remoção", async ({ page }) => {
+  await add(page);
+  const coupon = page.getByLabel("Cupom");
+  await coupon.fill("INVALIDO");
+  await page.getByRole("button", { name: "Aplicar", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText(/inválido/i);
+  await coupon.fill("JUNGLE10");
+  await page.getByRole("button", { name: "Aplicar", exact: true }).click();
+  await expect(page.getByText("0.1130 ETH")).toBeVisible();
+  await page.getByRole("button", { name: "Aumentar Onça Espectral" }).click();
+  await expect(page.getByText("0.2210 ETH")).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("0.2210 ETH")).toBeVisible();
+  await page.getByRole("button", { name: "Remover", exact: true }).click();
+  await expect(page.getByText("Seu carrinho está vazio.")).toBeVisible();
+});
+
+test("perfil valida senha atual e persiste nome, avatar e nova senha", async ({
+  page,
+}) => {
+  await page.goto("/profile");
+  await signIn(page);
+  const name = page.getByLabel("Nome", { exact: true });
+  const avatar = page.getByLabel("URL do avatar");
+  const previous = page.getByLabel("Senha atual");
+  const nextPassword = "novaSenha123";
+  await name.fill("Alex Atualizado");
+  await avatar.fill("https://example.test/avatar.png");
+  await previous.fill("senhaErrada");
+  await page.getByLabel("Nova senha", { exact: true }).fill(nextPassword);
+  await page.getByLabel("Confirmar nova senha").fill(nextPassword);
+  await page.getByRole("button", { name: "Salvar perfil" }).click();
+  await expect(page.getByRole("alert")).toContainText("Confira a senha atual");
+  await previous.fill("jungle123");
+  await page.getByRole("button", { name: "Salvar perfil" }).click();
+  await expect(page.getByText("Perfil salvo.")).toBeVisible();
+  await page.reload();
+  await expect(name).toHaveValue("Alex Atualizado");
+  await expect(avatar).toHaveValue("https://example.test/avatar.png");
+  await page.getByRole("button", { name: "Sair", exact: true }).click();
+  await page.getByRole("link", { name: "Entrar", exact: true }).click();
+  await page.getByLabel("E-mail").fill("demo@jungle.test");
+  await page.getByLabel("Senha", { exact: true }).fill(nextPassword);
+  await page.getByRole("button", { name: "Entrar", exact: true }).click();
+  await expect(
+    page.getByRole("link", { name: "Perfil", exact: true }),
+  ).toBeVisible();
+});
+
+test("login mantém o foco no diálogo e fecha com Escape", async ({ page }) => {
+  await page.goto("/");
+  const entry = page.getByRole("link", { name: "Entrar", exact: true });
+  await entry.focus();
+  await page.keyboard.press("Enter");
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  for (let step = 0; step < 10; step++) {
+    await page.keyboard.press("Tab");
+    await expect(dialog.locator(":focus")).toHaveCount(1);
+  }
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(entry).toBeVisible();
+});

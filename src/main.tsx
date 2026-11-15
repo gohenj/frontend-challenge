@@ -974,9 +974,17 @@ function Auth({ register: create }: { register?: boolean }) {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                action.mutate(
-                  Object.fromEntries(new FormData(e.currentTarget)),
-                );
+                const fields = new FormData(e.currentTarget);
+                if (
+                  create &&
+                  fields.get("password") !== fields.get("confirmation")
+                ) {
+                  setMismatch(true);
+                  return;
+                }
+                setMismatch(false);
+                fields.delete("confirmation");
+                action.mutate(Object.fromEntries(fields));
               }}
             >
               {create && (
