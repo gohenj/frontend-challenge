@@ -308,55 +308,66 @@ function Home() {
         />
       </section>
       <section id="catalogo">
-        <form
-          className="filters"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void update({
-              q: String(new FormData(e.currentTarget).get("q")).trim(),
-            });
-          }}
-        >
-          <label>
-            Busca
-            <input
-              key={search.q}
-              name="q"
-              defaultValue={search.q}
-              placeholder="Nome do NFT"
+        <aside className="catalog-sidebar">
+          <form
+            className="filters"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void update({
+                q: String(new FormData(e.currentTarget).get("q")).trim(),
+              });
+            }}
+          >
+            <label>
+              Busca
+              <input
+                key={search.q}
+                name="q"
+                defaultValue={search.q}
+                placeholder="Nome do NFT"
+              />
+            </label>
+            <button>Buscar</button>
+            <label>
+              Categoria
+              <select
+                value={search.category}
+                onChange={(e) => void update({ category: e.target.value })}
+              >
+                <option value="">Todas</option>
+                <option>Criaturas</option>
+                <option>Relíquias</option>
+              </select>
+            </label>
+            <label>
+              Ordenar
+              <select
+                value={search.sort}
+                onChange={(e) => void update({ sort: e.target.value })}
+              >
+                <option value="">Destaques</option>
+                <option value="price">Menor preço</option>
+              </select>
+            </label>
+            <label className="checkbox">
+              <input
+                type="checkbox"
+                checked={search.available}
+                onChange={(e) => void update({ available: e.target.checked })}
+              />{" "}
+              Disponíveis
+            </label>
+          </form>
+          <a className="featured-nft" href="#catalogo">
+            <strong>NFT EM DESTAQUE</strong>
+            <span>OFERTA LIMITADA</span>
+            <img
+              src={artUrl(1)}
+              alt="NFT de moletom roxo e chapéu verde"
+              loading="lazy"
             />
-          </label>
-          <button>Buscar</button>
-          <label>
-            Categoria
-            <select
-              value={search.category}
-              onChange={(e) => void update({ category: e.target.value })}
-            >
-              <option value="">Todas</option>
-              <option>Criaturas</option>
-              <option>Relíquias</option>
-            </select>
-          </label>
-          <label>
-            Ordenar
-            <select
-              value={search.sort}
-              onChange={(e) => void update({ sort: e.target.value })}
-            >
-              <option value="">Destaques</option>
-              <option value="price">Menor preço</option>
-            </select>
-          </label>
-          <label className="checkbox">
-            <input
-              type="checkbox"
-              checked={search.available}
-              onChange={(e) => void update({ available: e.target.checked })}
-            />{" "}
-            Disponíveis
-          </label>
-        </form>
+          </a>
+        </aside>
         <div className="catalog-results">
           <h2>Todos os NFTs</h2>
           {catalog.isPending ? (
@@ -407,6 +418,117 @@ function Home() {
           )}
         </div>
       </section>
+      <section className="home-promos" aria-label="Destaques da coleção">
+        {[
+          {
+            art: 0,
+            title: "Lançamentos gênesis de edição limitada",
+            desc: "Colecione edições escassas diretamente dos criadores antes da revelação pública.",
+          },
+          {
+            art: 2,
+            title: "Arte digital selecionada e muito mais",
+            desc: "Explore novos artistas, coleções verificadas e obras digitais.",
+          },
+        ].map(({ art, title, desc }) => (
+          <article key={title}>
+            <img src={artUrl(art)} alt="" loading="lazy" />
+            <div>
+              <h2>{title}</h2>
+              <p>{desc}</p>
+              <a className="button" href="#catalogo">
+                Explorar →
+              </a>
+            </div>
+          </article>
+        ))}
+      </section>
+      <section className="home-journal">
+        <h2>Diário da Cunhagem</h2>
+        <p>
+          Histórias, guias e insights para colecionadores sobre o universo da
+          propriedade digital.
+        </p>
+        <div className="journal-grid">
+          {[
+            [
+              2,
+              "12 de setembro",
+              6,
+              "Como funciona a propriedade de NFTs",
+              "Aprenda a colecionar, negociar e verificar ativos digitais.",
+            ],
+            [
+              0,
+              "13 de setembro",
+              2,
+              "10 artistas digitais para acompanhar",
+              "Conheça criadores que moldam a cultura digital.",
+            ],
+            [
+              1,
+              "15 de setembro",
+              3,
+              "Raridade, atributos e procedência",
+              "Entenda raridade, procedência, direitos autorais e utilidade.",
+            ],
+            [
+              3,
+              "15 de setembro",
+              2,
+              "Como proteger sua carteira",
+              "Proteja sua carteira, seus ativos e sua identidade.",
+            ],
+          ].map(([art, date, minutes, title, desc]) => (
+            <article key={title}>
+              <img src={artUrl(Number(art))} alt="" loading="lazy" />
+              <div>
+                <small>
+                  {date} · Leitura de {minutes} min
+                </small>
+                <h3>{title}</h3>
+                <p>{desc}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+      <section className="home-info" aria-label="Sobre a Kurio">
+        {[
+          [
+            "W",
+            "Segurança da carteira",
+            "Proteja sua carteira e colecione arte digital verificada com confiança.",
+          ],
+          [
+            "C",
+            "Criadores em destaque",
+            "Conheça artistas, estúdios e comunidades que moldam a cultura digital.",
+          ],
+          [
+            "D",
+            "Alertas de lançamentos",
+            "Receba calendários de cunhagem, novidades de listas de acesso e análises do mercado.",
+          ],
+        ].map(([initial, title, desc]) => (
+          <article key={initial}>
+            <span aria-hidden="true">{initial}</span>
+            <h2>{title}</h2>
+            <p>{desc}</p>
+          </article>
+        ))}
+        <article>
+          <h2>Antecipe-se ao próximo lançamento</h2>
+          <p>
+            Receba lançamentos selecionados, histórias de criadores e novidades
+            do mercado.
+          </p>
+        </article>
+      </section>
+      <div className="home-contact">
+        <strong>KURIO</strong>
+        <span>Feito para colecionadores, criadores e cultura</span>
+      </div>
     </>
   );
 }
