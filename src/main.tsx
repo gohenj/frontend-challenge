@@ -916,6 +916,8 @@ const register = createRoute({
 });
 function Auth({ register: create }: { register?: boolean }) {
   const { next } = useNavigateSearch();
+  const [showPassword, setShowPassword] = useState(false);
+  const [mismatch, setMismatch] = useState(false);
   const action = useMutation({
     mutationFn: (body: Record<string, FormDataEntryValue>) =>
       post<User>(
@@ -942,7 +944,9 @@ function Auth({ register: create }: { register?: boolean }) {
       >
         <Dialog.Portal>
           <Dialog.Overlay className="auth-overlay" />
-          <Dialog.Content className="auth-dialog">
+          <Dialog.Content
+            className={create ? "auth-dialog auth-register" : "auth-dialog"}
+          >
             <Dialog.Close className="auth-close" aria-label="Fechar">
               ×
             </Dialog.Close>
@@ -967,8 +971,13 @@ function Auth({ register: create }: { register?: boolean }) {
             >
               {create && (
                 <label>
-                  Nome
-                  <input name="name" required autoComplete="name" />
+                  <span className="sr-only">Nome de usuário</span>
+                  <input
+                    name="name"
+                    placeholder="Nome de usuário"
+                    required
+                    autoComplete="name"
+                  />
                 </label>
               )}
               <label>
@@ -976,7 +985,9 @@ function Auth({ register: create }: { register?: boolean }) {
                 <input
                   name="email"
                   type="email"
-                  placeholder="contato@email.com"
+                  placeholder={
+                    create ? "Digite seu e-mail" : "contato@email.com"
+                  }
                   required
                   autoComplete="email"
                 />
@@ -986,15 +997,48 @@ function Auth({ register: create }: { register?: boolean }) {
                 <input
                   name="password"
                   placeholder="Senha"
-                  type="password"
+                  type={create && showPassword ? "text" : "password"}
                   required
                   minLength={8}
                   autoComplete={create ? "new-password" : "current-password"}
                 />
               </label>
+              {create && (
+                <>
+                  <button
+                    className="register-reveal"
+                    type="button"
+                    aria-pressed={showPassword}
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    Mostrar senha
+                  </button>
+                  <label>
+                    <span className="sr-only">Confirmar senha</span>
+                    <input
+                      name="confirmation"
+                      type="password"
+                      placeholder="Confirmar senha"
+                      required
+                      minLength={8}
+                      autoComplete="new-password"
+                      aria-invalid={mismatch}
+                      aria-describedby={
+                        mismatch ? "password-mismatch" : undefined
+                      }
+                      onChange={() => setMismatch(false)}
+                    />
+                  </label>
+                  {mismatch && (
+                    <p className="error" id="password-mismatch" role="alert">
+                      As senhas precisam ser iguais.
+                    </p>
+                  )}
+                </>
+              )}
               {feedback(action.error)}
               <Button disabled={action.isPending}>
-                {create ? "Cadastrar" : "Entrar"}
+                {create ? "Criar conta" : "Entrar"}
               </Button>
             </form>
             <div className="auth-social">

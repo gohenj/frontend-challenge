@@ -1137,3 +1137,44 @@ main:has(.home-journal) {
     padding-top: 4rem;
   }
 }
+
+.auth-register {
+  width: min(612px, calc(100% - 2rem));
+  padding-inline: clamp(1rem, 6vw, 5.6rem);
+}
+.auth-register .auth-heading {
+  flex-direction: row-reverse;
+}
+.auth-register .auth-heading a {
+  border-left: 0;
+  border-right: 1px solid #805639;
+  padding: 0 0.65rem 0 0;
+}
+.auth-register [data-state] {
+  min-width: 0;
+}
+.auth-register form input,
+.auth-register .auth-social button {
+  min-height: 3.1rem;
+  padding-inline: 1rem;
+}
+.auth-register form > .primary {
+  min-height: 3.5rem;
+  margin-top: 0.7rem;
+}
+.auth-register .register-reveal {
+  justify-self: end;
+  background: none;
+  border: 0;
+  color: #dc9657;
+  padding: 0;
+  font-size: 0.75rem;
+}
+.auth-register > p {
+  margin-block: 2rem 1.5rem;
+}
+@media (max-width: 600px) {
+  .auth-register {
+    width: 100%;
+  }
+}
