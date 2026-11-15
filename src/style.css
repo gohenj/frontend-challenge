@@ -1194,3 +1194,9 @@ main:has(.home-journal) {
 .account-content .catalog-grid {
   margin-block: 1rem;
 }
+
+.favorite-button[aria-pressed="true"] {
+  background: #dc9657;
+  border-color: #dc9657;
+  color: #1d1109;
+}

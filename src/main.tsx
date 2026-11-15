@@ -576,6 +576,7 @@ function Detail() {
       return previous;
     },
     onError: (_, __, previous) => client.setQueryData(key, previous),
+    onSuccess: (saved) => client.setQueryData(key, saved),
     onSettled: () => refresh("favorites"),
   });
   const add = useMutation({
@@ -645,17 +646,26 @@ function Detail() {
           {user ? (
             <button
               aria-pressed={favorites.data?.includes(id) ?? false}
-              disabled={favorite.isPending}
+              className="favorite-button"
+              aria-label="Favorito"
+              disabled={favorite.isPending || !favorites.data}
               onClick={() => favorite.mutate()}
             >
-              Favorito
+              <span aria-hidden="true">
+                {favorites.data?.includes(id) ? "♥ Favoritado" : "♡ Favoritar"}
+              </span>
             </button>
           ) : (
             <Link to="/login" search={{ next: location.pathname }}>
               Entre para favoritar
             </Link>
           )}
-          {feedback(favorite.error)}
+          {feedback(favorite.error || favorites.error)}
+          {favorites.isError && (
+            <button onClick={() => void favorites.refetch()}>
+              Recarregar favoritos
+            </button>
+          )}
           <form
             onSubmit={(e) => {
               e.preventDefault();
