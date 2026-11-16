@@ -8,39 +8,39 @@
   },
   "summary": {
     "inicio-mobile": {
-      "performance": 95,
+      "performance": 93,
       "accessibility": 100,
       "best-practices": 96,
-      "seo": 91,
-      "lcp": 2905.8218,
+      "seo": 92,
+      "lcp": 3128.0134,
       "cls": 0,
-      "tbt": 69
+      "tbt": 108
     },
     "inicio-desktop": {
       "performance": 100,
       "accessibility": 100,
       "best-practices": 96,
-      "seo": 91,
-      "lcp": 206.4862,
+      "seo": 92,
+      "lcp": 694.9753999999999,
       "cls": 0,
       "tbt": 0
     },
     "detalhe-mobile": {
-      "performance": 95,
+      "performance": 90,
       "accessibility": 100,
       "best-practices": 96,
-      "seo": 91,
-      "lcp": 2905.6364,
-      "cls": 0.0172296716219149,
-      "tbt": 34
+      "seo": 92,
+      "lcp": 2973.157,
+      "cls": 0.1275820170109356,
+      "tbt": 13
     },
     "detalhe-desktop": {
-      "performance": 100,
+      "performance": 99,
       "accessibility": 100,
       "best-practices": 96,
-      "seo": 91,
-      "lcp": 665.4782,
-      "cls": 0,
+      "seo": 92,
+      "lcp": 688.3870000000001,
+      "cls": 0.05842701099537037,
       "tbt": 0
     }
   }
