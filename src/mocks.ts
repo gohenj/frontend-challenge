@@ -1,3 +1,4 @@
+import { editions, lineKey, stockFor, type Edition } from "./contracts";
 import { delay, http, HttpResponse, ws } from "msw";
 import { setupWorker } from "msw/browser";
 import { toSocketIo } from "@mswjs/socket.io-binding";
@@ -113,7 +114,7 @@ const quote = (): Quote => {
     total: decimal(subtotal - discount + fee),
     signature: JSON.stringify([
       cart().coupon,
-      items.map((i) => [i.id, i.quantity, i.nft.version]),
+      items.map((i) => [lineKey(i), i.quantity, i.nft.version]),
       decimal(subtotal - discount + fee),
     ]),
   };
@@ -122,6 +123,7 @@ const socket = ws.link(location.origin.replace(/^http/, "ws") + "/");
 const peers = new Set<{
   owner: string | undefined;
   emit: (event: string, data: unknown) => void;
+  close: () => void;
 }>();
 const emit = (
   event: string,
@@ -145,10 +147,15 @@ const settle = (purchase: Purchase) => {
   if (!purchase.decline) {
     for (const item of order.quote.items) {
       const nft = state.nfts.find((n) => n.id === item.id)!;
-      nft.stock = Math.max(0, nft.stock - item.quantity);
+      const edition = item.edition ?? "genesis";
+      const remaining = Math.max(0, stockFor(nft, edition) - item.quantity);
+      if (edition === "genesis") nft.stock = remaining;
+      else (nft.editionStock ??= {})[edition] = remaining;
       nft.version++;
       {
-        const line = cart(purchase.owner).lines.find((l) => l.id === item.id);
+        const line = cart(purchase.owner).lines.find(
+          (l) => lineKey(l) === lineKey(item),
+        );
         if (line) line.quantity -= item.quantity;
       }
       emit("nft.updated", nft.id, nft.version);
@@ -172,6 +179,29 @@ const api = http.all(
         : ((await request.json()) as Record<string, string | number>);
     if (path === "demo") {
       scenario = String(body.scenario);
+      if (scenario === "disconnect") {
+        for (const peer of peers) {
+          peers.delete(peer);
+          peer.close();
+        }
+        for (const purchase of Object.values(state.orders)) {
+          if (
+            purchase.owner === user()?.id &&
+            purchase.order.status === "pending"
+          ) {
+            purchase.due = Date.now();
+            settle(purchase);
+          }
+        }
+        scenario = "default";
+      }
+      if (scenario === "duplicates") {
+        const nft =
+          state.nfts.find((n) => n.id === cart().lines[0]?.id) ?? state.nfts[0];
+        emit("nft.updated", nft.id, nft.version);
+        emit("nft.updated", nft.id, nft.version - 1);
+        scenario = "default";
+      }
       if (scenario === "reset") {
         state = seed();
         scenario = "default";
@@ -185,7 +215,11 @@ const api = http.all(
         const nft =
           state.nfts.find((n) => n.id === cart().lines[0]?.id) ?? state.nfts[0];
         if (scenario === "price") nft.price = decimal(units(nft.price) + 100n);
-        else nft.stock = 0;
+        else {
+          const edition = cart().lines[0]?.edition ?? "genesis";
+          if (edition === "genesis") nft.stock = 0;
+          else (nft.editionStock ??= {})[edition] = 0;
+        }
         nft.version++;
         save();
         emit("nft.updated", nft.id, nft.version);
@@ -242,8 +276,13 @@ const api = http.all(
       if (state.cart.lines.length) {
         const target = cart(match.id);
         for (const line of state.cart.lines) {
-          const existing = target.lines.find((item) => item.id === line.id);
-          const stock = state.nfts.find((nft) => nft.id === line.id)!.stock;
+          const existing = target.lines.find(
+            (item) => lineKey(item) === lineKey(line),
+          );
+          const stock = stockFor(
+            state.nfts.find((nft) => nft.id === line.id)!,
+            line.edition,
+          );
           if (existing)
             existing.quantity = Math.min(
               existing.quantity + line.quantity,
@@ -289,15 +328,20 @@ const api = http.all(
       if (method !== "GET") {
         const nft = state.nfts.find((n) => n.id === body.id);
         const quantity = Number(body.quantity);
+        const edition = String(body.edition ?? "genesis") as Edition;
+        if (!Object.hasOwn(editions, edition))
+          return err(422, "Edição inválida.");
         if (
           !nft ||
           !Number.isInteger(quantity) ||
           quantity < 0 ||
-          (quantity > nft.stock && quantity !== 0)
+          (quantity > stockFor(nft, edition) && quantity !== 0)
         )
           return err(409, "Quantidade indisponível.");
-        cart().lines = cart().lines.filter((l) => l.id !== nft.id);
-        if (quantity) cart().lines.push({ id: nft.id, quantity });
+        cart().lines = cart().lines.filter(
+          (l) => lineKey(l) !== lineKey({ id: nft.id, edition, quantity }),
+        );
+        if (quantity) cart().lines.push({ id: nft.id, quantity, edition });
         save();
       }
       return json(cart());
@@ -387,7 +431,7 @@ const api = http.all(
       if (
         snapshot.signature !== body.signature ||
         !snapshot.items.length ||
-        snapshot.items.some((i) => i.quantity > i.nft.stock)
+        snapshot.items.some((i) => i.quantity > stockFor(i.nft, i.edition))
       )
         return err(409, "A cotação mudou. Confira o carrinho.");
       if (
@@ -439,6 +483,7 @@ export const worker = setupWorker(
     const io = toSocketIo(connection);
     const peer = {
       owner: user()?.id,
+      close: () => connection.client.close(1012, "Simulated restart"),
       emit: (event: string, data: unknown) => io.client.emit(event, data),
     };
     peers.add(peer);

@@ -26,5 +26,6 @@ Os eventos nft.updated e order.updated usam o mesmo envelope com id, resource e 
 
 ## Limitações
 
-A interface usa como referência os frames e a gravação do protótipo, com as quatro artes fornecidas. O acesso direto ao Figma segue pendente e alguns detalhes de composição foram aproximados. As fixtures oferecem uma edição Genesis por NFT. As credenciais e carteiras são fictícias, a conexão da carteira é simulada e a autenticação local serve à demonstração.
+A interface usa como referência os frames e a gravação do protótipo, com as quatro artes fornecidas. O acesso direto ao Figma segue pendente e alguns detalhes de composição foram aproximados. As fixtures oferecem as edições Genesis, Limitada e Aberta, com estoques separados. Linhas do carrinho e do recibo são identificadas pelo NFT e pela edição. Linhas antigas sem edição são lidas como Genesis. As credenciais e carteiras são fictícias, a conexão da carteira é simulada e a autenticação local serve à demonstração.
+
 

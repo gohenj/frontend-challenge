@@ -39,3 +39,5 @@ npm run audit
 Playwright usa o build local e grava relatório HTML em playwright-report. O Lighthouse usa o preview em localhost:4174 e grava HTML, JSON e medianas em reports/lighthouse. A configuração do Vercel inclui fallback das rotas e preserva o service worker do MSW. Configure o projeto como Vite e publique a pasta dist a partir do repositório da solução.
 
 Consulte [ARCHITECTURE.md](ARCHITECTURE.md) para contratos, cache, eventos e limitações. O [repositório original](https://github.com/junglegaming/frontend-challenge) contém o enunciado.
+
+Para conferir estoque por edição, selecione Genesis e Limitada no mesmo NFT e adicione cada uma ao carrinho. O checkout valida o estoque de cada linha e o recibo registra as edições. Os testes também exercitam os cenários de rede `disconnect` e `duplicates` via POST /api/demo.

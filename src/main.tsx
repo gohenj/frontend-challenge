@@ -1,3 +1,10 @@
+import {
+  editions,
+  lineKey,
+  stockFor,
+  type Edition,
+  type Line,
+} from "./contracts";
 import { useEffect, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -579,12 +586,17 @@ function Detail() {
     onSuccess: (saved) => client.setQueryData(key, saved),
     onSettled: () => refresh("favorites"),
   });
+  const [edition, setEdition] = useState<Edition>("genesis");
   const add = useMutation({
     mutationFn: (quantity: number) =>
       post("/cart", {
         id,
+        edition,
         quantity:
-          quantity + (cart.data?.lines.find((i) => i.id === id)?.quantity ?? 0),
+          quantity +
+          (cart.data?.lines.find(
+            (i) => i.id === id && (i.edition ?? "genesis") === edition,
+          )?.quantity ?? 0),
       }),
     onSuccess: () => refresh("cart", "quote"),
   });
@@ -597,7 +609,10 @@ function Detail() {
   if (nft.isPending) return <Loading />;
   if (nft.isError) return <Failure error={nft.error} retry={nft.refetch} />;
   const remaining =
-    nft.data.stock - (cart.data?.lines.find((i) => i.id === id)?.quantity ?? 0);
+    stockFor(nft.data, edition) -
+    (cart.data?.lines.find(
+      (i) => i.id === id && (i.edition ?? "genesis") === edition,
+    )?.quantity ?? 0);
   return (
     <div className="detail-page">
       <article className="split nft-detail">
@@ -631,7 +646,7 @@ function Detail() {
           <dl className="nft-meta">
             <div>
               <dt>Edição</dt>
-              <dd>Genesis</dd>
+              <dd>{editions[edition]}</dd>
             </div>
             <div>
               <dt>ID do token</dt>
@@ -639,7 +654,7 @@ function Detail() {
             </div>
             <div>
               <dt>Disponibilidade</dt>
-              <dd>{nft.data.stock} disponíveis</dd>
+              <dd>{stockFor(nft.data, edition)} disponíveis</dd>
             </div>
           </dl>
           <p className="price">{nft.data.price} ETH</p>
@@ -672,6 +687,19 @@ function Detail() {
               add.mutate(Number(new FormData(e.currentTarget).get("quantity")));
             }}
           >
+            <label>
+              Edição
+              <select
+                value={edition}
+                onChange={(e) => setEdition(e.target.value as Edition)}
+              >
+                {Object.entries(editions).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>{" "}
             <label>
               Quantidade
               <input
@@ -708,7 +736,7 @@ function Detail() {
           <dt>Coleção</dt>
           <dd>Kurio Editions</dd>
           <dt>Edição</dt>
-          <dd>Genesis</dd>
+          <dd>{editions[edition]}</dd>
         </dl>
       </section>
       <section className="detail-section">
@@ -745,7 +773,7 @@ function CartPage() {
   });
   const quote = useResource<Quote>("quote");
   const edit = useMutation({
-    mutationFn: (line: { id: string; quantity: number }) => post("/cart", line),
+    mutationFn: (line: Line) => post("/cart", line),
     onSuccess: () => refresh("cart", "quote"),
   });
   const coupon = useMutation({
@@ -774,14 +802,17 @@ function CartPage() {
               <span>Quantidade</span>
             </div>
             {quote.data.items.map((item) => (
-              <article className="line" key={item.id}>
+              <article className="line" key={lineKey(item)}>
                 <Link
                   className="purchase-item"
                   to="/nft/$id"
                   params={{ id: item.id }}
                 >
                   <Art nft={item.nft} />
-                  <span>{item.nft.name}</span>
+                  <span>
+                    {item.nft.name}
+                    <small>{editions[item.edition ?? "genesis"]}</small>
+                  </span>
                 </Link>
                 <span>{item.nft.price} ETH</span>
                 <div>
@@ -789,7 +820,11 @@ function CartPage() {
                     aria-label={"Diminuir " + item.nft.name}
                     disabled={item.quantity <= 1 || edit.isPending}
                     onClick={() =>
-                      edit.mutate({ id: item.id, quantity: item.quantity - 1 })
+                      edit.mutate({
+                        id: item.id,
+                        edition: item.edition,
+                        quantity: item.quantity - 1,
+                      })
                     }
                   >
                     −
@@ -797,21 +832,34 @@ function CartPage() {
                   {item.quantity}{" "}
                   <button
                     aria-label={"Aumentar " + item.nft.name}
-                    disabled={item.quantity >= item.nft.stock || edit.isPending}
+                    disabled={
+                      item.quantity >= stockFor(item.nft, item.edition) ||
+                      edit.isPending
+                    }
                     onClick={() =>
-                      edit.mutate({ id: item.id, quantity: item.quantity + 1 })
+                      edit.mutate({
+                        id: item.id,
+                        edition: item.edition,
+                        quantity: item.quantity + 1,
+                      })
                     }
                   >
                     +
                   </button>{" "}
                   <button
                     disabled={edit.isPending}
-                    onClick={() => edit.mutate({ id: item.id, quantity: 0 })}
+                    onClick={() =>
+                      edit.mutate({
+                        id: item.id,
+                        edition: item.edition,
+                        quantity: 0,
+                      })
+                    }
                   >
                     Remover
                   </button>
                 </div>
-                {item.quantity > item.nft.stock && (
+                {item.quantity > stockFor(item.nft, item.edition) && (
                   <p role="alert">Quantidade indisponível.</p>
                 )}
               </article>
@@ -1220,14 +1268,18 @@ function Checkout() {
           <section className="panel purchase-summary">
             <h2>Seus NFTs</h2>
             <ul className="checkout-items">
-              {quote.data.items.map(({ nft, quantity }) => (
-                <li className="purchase-item" key={nft.id}>
+              {quote.data.items.map(({ nft, quantity, edition }) => (
+                <li
+                  className="purchase-item"
+                  key={lineKey({ id: nft.id, quantity, edition })}
+                >
                   <Art nft={nft} />
                   <span>
                     <strong>{nft.name}</strong>
                     <small>ID do token: #{nft.id.padStart(4, "0")}</small>
                     <small>
-                      {quantity} × {nft.price} ETH
+                      {editions[edition ?? "genesis"]} · {quantity} ×{" "}
+                      {nft.price} ETH
                     </small>
                   </span>
                 </li>
@@ -1292,7 +1344,9 @@ function Checkout() {
                 disabled={
                   !!retry ||
                   !quote.data.items.length ||
-                  quote.data.items.some((i) => i.quantity > i.nft.stock) ||
+                  quote.data.items.some(
+                    (i) => i.quantity > stockFor(i.nft, i.edition),
+                  ) ||
                   connection !== "Conectada"
                 }
               >
@@ -1415,13 +1469,16 @@ function Receipt() {
           <h2>Detalhes da transação</h2>
           <ul className="receipt-items">
             {quote.items.map((i) => (
-              <li key={i.id}>
+              <li key={lineKey(i)}>
                 <Art nft={i.nft} />
                 <div>
                   <strong>
                     {i.quantity} × {i.nft.name}
                   </strong>
-                  <small>ID do token: #{i.id.padStart(4, "0")}</small>
+                  <small>
+                    {editions[i.edition ?? "genesis"]} · ID do token: #
+                    {i.id.padStart(4, "0")}
+                  </small>
                 </div>
                 <span>{i.nft.price} ETH</span>
               </li>

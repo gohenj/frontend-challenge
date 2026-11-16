@@ -119,7 +119,9 @@ test("pagamento recusado conserva os itens", async ({ page }) => {
   ).toBeVisible();
   await page.getByRole("link", { name: "Voltar ao carrinho" }).click();
   await expect(
-    page.getByRole("link", { name: "Onça Espectral", exact: true }),
+    page
+      .getByRole("region", { name: "Itens do carrinho" })
+      .getByRole("link", { name: /Onça Espectral/ }),
   ).toBeVisible();
 });
 test("favorito faz rollback e fica isolado por conta", async ({ page }) => {
@@ -383,4 +385,72 @@ test("NFT favoritado aparece na lista de interesse após recarregar", async ({
   await expect(nft).toBeVisible();
   await page.reload();
   await expect(nft).toBeVisible();
+});
+
+test("mesmo NFT com duas edições mantém estoque e recibo separados", async ({
+  page,
+}) => {
+  await page.goto("/nft/1");
+  const edition = page.getByRole("combobox", { name: "Edição", exact: true });
+  const quantity = page.getByLabel("Quantidade");
+  const addButton = page.getByRole("button", { name: "Adicionar ao carrinho" });
+  await addButton.click();
+  await expect(page.getByRole("link", { name: "Ver carrinho" })).toBeVisible();
+  await edition.selectOption("limited");
+  await expect(quantity).toHaveAttribute("max", "2");
+  await quantity.fill("2");
+  await addButton.click();
+  await expect(addButton).toBeDisabled();
+  await page.getByRole("link", { name: "Ver carrinho" }).click();
+  await expect(
+    page.getByText("Limitada · 1/10", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Genesis · 1/50", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Conectar e finalizar" }).click();
+  await signIn(page);
+  await page
+    .getByRole("combobox", { name: "Carteira", exact: true })
+    .selectOption({ index: 1 });
+  await page.getByRole("button", { name: "Conectar carteira" }).click();
+  await review(page);
+  await confirm(page);
+  await expect(
+    page.getByRole("heading", { name: "Compra confirmada" }),
+  ).toBeVisible();
+  await expect(page.getByText("2 × Onça Espectral")).toBeVisible();
+  await expect(page.getByText(/Limitada · 1\/10 · ID do token/)).toBeVisible();
+});
+
+test("reconexão recupera confirmação no mesmo pedido pendente", async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date());
+  await checkout(page);
+  await review(page);
+  await confirm(page);
+  await expect(
+    page.getByRole("heading", { name: "Pagamento pendente" }),
+  ).toBeVisible();
+  const receiptUrl = page.url();
+  await scenario(page, "disconnect");
+  await expect(
+    page.getByRole("heading", { name: "Compra confirmada" }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(receiptUrl);
+  await expect(async () => {
+    await scenario(page, "price");
+    await expect(
+      page.getByText("Preço ou disponibilidade atualizados."),
+    ).toBeVisible({ timeout: 300 });
+  }).toPass({ timeout: 5000 });
+});
+
+test("evento repetido ou antigo mantém a cotação atual", async ({ page }) => {
+  await checkout(page);
+  await scenario(page, "price");
+  await expect(page.getByText("0.1350 ETH")).toBeVisible();
+  await scenario(page, "duplicates");
+  await expect(page.getByText("0.1350 ETH")).toBeVisible();
+  await review(page);
+  await expect(page.getByRole("dialog").getByText("0.1350 ETH")).toBeVisible();
 });
